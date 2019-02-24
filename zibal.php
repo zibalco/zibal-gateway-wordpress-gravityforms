@@ -2256,9 +2256,9 @@ class GFPersian_Gateway_Zibal {
 				}
 
 
-				if ( isset( $_POST['success'] ) &&  $_POST['success']  == '1' ) {
+				if ( isset( $_GET['success'] ) &&  $_GET['success']  == '1' ) {
 
-					$trackId  = isset( $_POST['trackId'] ) ? sanitize_text_field( $_POST['trackId'] ) : '';
+					$trackId  = isset( $_GET['trackId'] ) ? sanitize_text_field( $_GET['trackId'] ) : '';
 					$merchantId = self::get_merchent();
 
 					
@@ -2425,7 +2425,7 @@ class GFPersian_Gateway_Zibal {
  */
 private static function postToZibal($path, $parameters)
 {
-    $url = 'https://gateway.zibal.ir/'.$path;
+    $url = 'https://gateway.zibal.ir/v1/'.$path;
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
