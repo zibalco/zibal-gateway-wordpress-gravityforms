@@ -1,11 +1,11 @@
 <?php
 /*
 Plugin Name: درگاه زیبال گرویتی فرم
-Plugin URI: http://gravityforms.ir/
+Plugin URI: http://zibal.ir/
 Description: افزونه درگاه پرداخت زیبال برای فرم ساز فوق پیشرفته Gravity Forms
-Version: 2.3.2
-Author: گرویتی فرم پارسی
-Author URI: http://gravityforms.ir/
+Version: 1.0.0
+Author: Zibal
+Author URI: http://zibal.ir/
 */
 if (!defined('ABSPATH')) exit;
 require_once('zibal.php');

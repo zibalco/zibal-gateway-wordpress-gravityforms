@@ -11,14 +11,14 @@ require_once( 'chart.php' );
 class GFPersian_Gateway_Zibal {
 
 	//Dont Change this Parameter if you are legitimate !!!
-	public static $author = "HANNANStd";
+	public static $author = "Zibal";
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	private static $version = "2.3.0";
 	private static $min_gravityforms_version = "1.9.10";
 	private static $config = null;
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function init() {
 		if ( ! class_exists( "GFPersian_Payments" ) || ! defined( 'GF_PERSIAN_VERSION' ) || version_compare( GF_PERSIAN_VERSION, '2.3.1', '<' ) ) {
 			add_action( 'admin_notices', array( __CLASS__, 'admin_notice_persian_gf' ) );
@@ -81,14 +81,14 @@ class GFPersian_Gateway_Zibal {
 	}
 
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function admin_notice_persian_gf() {
 		$class   = 'notice notice-error';
 		$message = sprintf( __( "برای استفاده از نسخه جدید درگاه های پرداخت گرویتی فرم نصب بسته فارسی ساز نسخه 2.3.1 به بالا الزامی است. برای نصب فارسی ساز %sکلیک کنید%s.", "gravityformszibal" ), '<a href="' . admin_url( "plugin-install.php?tab=plugin-information&plugin=persian-gravity-forms&TB_iframe=true&width=772&height=884" ) . '">', '</a>' );
 		printf( '<div class="%1$s"><p>%2$s</p></div>', $class, $message );
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function admin_notice_gf_support() {
 		$class   = 'notice notice-error';
 		$message = sprintf( __( "درگاه زیبال نیاز به گرویتی فرم نسخه %s به بالا دارد. برای بروز رسانی هسته گرویتی فرم به %sسایت گرویتی فرم فارسی%s مراجعه نمایید .", "gravityformszibal" ), self::$min_gravityforms_version, "<a href='http://gravityforms.ir/11378' target='_blank'>", "</a>" );
@@ -97,7 +97,7 @@ class GFPersian_Gateway_Zibal {
 
 
 	// #1
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function gravityformszibal( $form, $entry ) {
 		$zibal = array(
 			'class' => ( __CLASS__ . '|' . self::$author ),
@@ -112,7 +112,7 @@ class GFPersian_Gateway_Zibal {
 		return apply_filters( self::$author . '_gf_zibal_detail', apply_filters( self::$author . '_gf_gateway_detail', $zibal, $form, $entry ), $form, $entry );
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function add_permissions() {
 		global $wp_roles;
 		$editable_roles = get_editable_roles();
@@ -124,12 +124,12 @@ class GFPersian_Gateway_Zibal {
 		}
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function members_get_capabilities( $caps ) {
 		return array_merge( $caps, array( "gravityforms_zibal", "gravityforms_zibal_uninstall" ) );
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	private static function setup() {
 		if ( get_option( "gf_zibal_version" ) != self::$version ) {
 			GFPersian_DB_Zibal::update_table();
@@ -137,14 +137,14 @@ class GFPersian_Gateway_Zibal {
 		}
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function tooltips( $tooltips ) {
 		$tooltips["gateway_name"] = __( "تذکر مهم : این قسمت برای نمایش به بازدید کننده می باشد و لطفا جهت جلوگیری از مشکل و تداخل آن را فقط یکبار تنظیم نمایید و از تنظیم مکرر آن خود داری نمایید .", "gravityformszibal" );
 
 		return $tooltips;
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function menu( $menus ) {
 		$permission = "gravityforms_zibal";
 		if ( ! empty( $permission ) ) {
@@ -159,7 +159,7 @@ class GFPersian_Gateway_Zibal {
 		return $menus;
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function toolbar( $menu_items ) {
 		$menu_items[] = array(
 			'name'  => 'zibal',
@@ -169,7 +169,7 @@ class GFPersian_Gateway_Zibal {
 		return $menu_items;
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	private static function is_gravityforms_supported() {
 		if ( class_exists( "GFCommon" ) ) {
 			$is_correct_version = version_compare( GFCommon::$version, self::$min_gravityforms_version, ">=" );
@@ -180,7 +180,7 @@ class GFPersian_Gateway_Zibal {
 		}
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	protected static function has_access( $required_permission = 'gravityforms_zibal' ) {
 		if ( ! function_exists( 'wp_get_current_user' ) ) {
 			include( ABSPATH . "wp-includes/pluggable.php" );
@@ -189,26 +189,26 @@ class GFPersian_Gateway_Zibal {
 		return GFCommon::current_user_can_any( $required_permission );
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	protected static function get_base_url() {
 		return plugins_url( null, __FILE__ );
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	protected static function get_base_path() {
 		$folder = basename( dirname( __FILE__ ) );
 
 		return WP_PLUGIN_DIR . "/" . $folder;
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function set_logging_supported( $plugins ) {
 		$plugins[ basename( dirname( __FILE__ ) ) ] = "Zibal";
 
 		return $plugins;
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function uninstall() {
 		if ( ! self::has_access( "gravityforms_zibal_uninstall" ) ) {
 			die( __( "شما مجوز کافی برای این کار را ندارید . سطح دسترسی شما پایین تر از حد مجاز است . ", "gravityformszibal" ) );
@@ -222,7 +222,7 @@ class GFPersian_Gateway_Zibal {
 		update_option( 'recently_activated', array( $plugin => time() ) + (array) get_option( 'recently_activated' ) );
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	private static function is_zibal_page() {
 		$current_page    = in_array( trim( strtolower( rgget( "page" ) ) ), array( 'gf_zibal', 'zibal' ) );
 		$current_view    = in_array( trim( strtolower( rgget( "view" ) ) ), array( 'gf_zibal', 'zibal' ) );
@@ -231,7 +231,7 @@ class GFPersian_Gateway_Zibal {
 		return $current_page || $current_view || $current_subview;
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function feed_page() {
 		GFFormSettings::page_header(); ?>
         <h3>
@@ -245,7 +245,7 @@ class GFPersian_Gateway_Zibal {
 		<?php GFFormSettings::page_footer();
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function has_zibal_condition( $form, $config ) {
 
 		if ( empty( $config['meta'] ) ) {
@@ -319,7 +319,7 @@ class GFPersian_Gateway_Zibal {
 		}
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function get_config_by_entry( $entry ) {
 		$feed_id = gform_get_meta( $entry["id"], "zibal_feed_id" );
 		$feed    = ! empty( $feed_id ) ? GFPersian_DB_Zibal::get_feed( $feed_id ) : '';
@@ -328,7 +328,7 @@ class GFPersian_Gateway_Zibal {
 		return apply_filters( self::$author . '_gf_zibal_get_config_by_entry', apply_filters( self::$author . '_gf_gateway_get_config_by_entry', $return, $entry ), $entry );
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function delay_posts( $is_disabled, $form, $entry ) {
 
 		$config = self::get_active_config( $form );
@@ -340,7 +340,7 @@ class GFPersian_Gateway_Zibal {
 		return $is_disabled;
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function delay_addons( $is_delayed, $form, $entry, $slug ) {
 
 		$config = self::get_active_config( $form );
@@ -366,7 +366,7 @@ class GFPersian_Gateway_Zibal {
 		return $is_delayed;
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	private static function redirect_confirmation( $url, $ajax ) {
 
 		if ( headers_sent() || $ajax ) {
@@ -382,7 +382,7 @@ class GFPersian_Gateway_Zibal {
 		return $confirmation;
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function get_active_config( $form ) {
 
 		if ( ! empty( self::$config ) ) {
@@ -410,7 +410,7 @@ class GFPersian_Gateway_Zibal {
 		return self::$config;
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function zibal_page() {
 		$view = rgget( "view" );
 		if ( $view == "edit" ) {
@@ -422,7 +422,7 @@ class GFPersian_Gateway_Zibal {
 		}
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	private static function list_page( $arg ) {
 
 		if ( ! self::is_gravityforms_supported() ) {
@@ -662,7 +662,7 @@ class GFPersian_Gateway_Zibal {
 		<?php
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function update_feed_active() {
 		check_ajax_referer( 'gf_zibal_update_feed_active', 'gf_zibal_update_feed_active' );
 		$id   = absint( rgpost( 'feed_id' ) );
@@ -670,7 +670,7 @@ class GFPersian_Gateway_Zibal {
 		GFPersian_DB_Zibal::update_feed( $id, $feed["form_id"], $_POST["is_active"], $feed["meta"] );
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	private static function Return_URL( $form_id, $entry_id ) {
 
 		$pageURL = GFCommon::is_ssl() ? 'https://' : 'http://';
@@ -692,7 +692,7 @@ class GFPersian_Gateway_Zibal {
 		return apply_filters( self::$author . '_zibal_return_url', apply_filters( self::$author . '_gateway_return_url', $pageURL, $form_id, $entry_id, __CLASS__ ), $form_id, $entry_id, __CLASS__ );
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function get_order_total( $form, $entry ) {
 
 		$total = GFCommon::get_order_total( $form, $entry );
@@ -701,7 +701,7 @@ class GFPersian_Gateway_Zibal {
 		return apply_filters( self::$author . '_zibal_get_order_total', apply_filters( self::$author . '_gateway_get_order_total', $total, $form, $entry ), $form, $entry );
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	private static function get_mapped_field_list( $field_name, $selected_field, $fields ) {
 		$str = "<select name='$field_name' id='$field_name'><option value=''></option>";
 		if ( is_array( $fields ) ) {
@@ -717,7 +717,7 @@ class GFPersian_Gateway_Zibal {
 		return $str;
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	private static function get_form_fields( $form ) {
 		$fields = array();
 		if ( is_array( $form["fields"] ) ) {
@@ -735,7 +735,7 @@ class GFPersian_Gateway_Zibal {
 		return $fields;
 	}
 
-	// ------------------------GravityForms.IR---------------------------------------------------------------------
+	--------------------------------------------
 	//desc
 	private static function get_customer_information_desc( $form, $config = null ) {
 		$form_fields    = self::get_form_fields( $form );
@@ -762,7 +762,7 @@ class GFPersian_Gateway_Zibal {
 	// ------------------------------------------------------------------------------------------------------------
 
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function payment_entry_detail( $form_id, $entry ) {
 
 		$payment_gateway = rgar( $entry, "payment_method" );
@@ -906,7 +906,7 @@ class GFPersian_Gateway_Zibal {
 		}
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function update_payment_entry( $form, $entry_id ) {
 
 		check_admin_referer( 'gforms_save_entry', 'gforms_save_entry' );
@@ -1010,7 +1010,7 @@ class GFPersian_Gateway_Zibal {
 	}
 
 	// #2
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function settings_page() {
 
 
@@ -1175,7 +1175,7 @@ class GFPersian_Gateway_Zibal {
 	}
 
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function get_gname() {
 		$settings = get_option( "gf_zibal_settings" );
 		if ( isset( $settings["gname"] ) ) {
@@ -1187,7 +1187,7 @@ class GFPersian_Gateway_Zibal {
 		return $gname;
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	private static function get_merchent() {
 		$settings = get_option( "gf_zibal_settings" );
 		$merchent = isset( $settings["merchent"] ) ? $settings["merchent"] : '';
@@ -1195,7 +1195,7 @@ class GFPersian_Gateway_Zibal {
 		return trim( $merchent );
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	private static function get_direct() {
 		$settings = get_option( "gf_zibal_settings" );
 		$direct   = isset( $settings["direct"] ) ? $settings["direct"] : '';
@@ -1205,7 +1205,7 @@ class GFPersian_Gateway_Zibal {
 
 
 	// #3
-	// ------------------------GravityForms.IR-------------------------
+	
 	private static function config_page() {
 
 		wp_register_style( 'gform_admin_zibal', GFCommon::get_base_url() . '/css/admin.css' );
@@ -2061,18 +2061,18 @@ class GFPersian_Gateway_Zibal {
 
 			} else {
 
-				$Amount = gform_get_meta( rgar( $entry, 'id' ), 'hannanstd_part_price_' . $form['id'] );
+				$Amount = gform_get_meta( rgar( $entry, 'id' ), 'zibal_part_price_' . $form['id'] );
 				$Amount = apply_filters( self::$author . "_gform_custom_gateway_price_{$form['id']}", apply_filters( self::$author . "_gform_custom_gateway_price", $Amount, $form, $entry ), $form, $entry );
 				$Amount = apply_filters( self::$author . "_gform_custom_zibal_price_{$form['id']}", apply_filters( self::$author . "_gform_custom_zibal_price", $Amount, $form, $entry ), $form, $entry );
 				$Amount = apply_filters( self::$author . "_gform_gateway_price_{$form['id']}", apply_filters( self::$author . "_gform_gateway_price", $Amount, $form, $entry ), $form, $entry );
 				$Amount = apply_filters( self::$author . "_gform_zibal_price_{$form['id']}", apply_filters( self::$author . "_gform_zibal_price", $Amount, $form, $entry ), $form, $entry );
 
-				$Description = gform_get_meta( rgar( $entry, 'id' ), 'hannanstd_part_desc_' . $form['id'] );
+				$Description = gform_get_meta( rgar( $entry, 'id' ), 'zibal_part_desc_' . $form['id'] );
 				$Description = apply_filters( self::$author . '_gform_zibal_gateway_desc_', apply_filters( self::$author . '_gform_custom_gateway_desc_', $Description, $form, $entry ), $form, $entry );
 
-				$Paymenter = gform_get_meta( rgar( $entry, 'id' ), 'hannanstd_part_name_' . $form['id'] );
-				$Email     = gform_get_meta( rgar( $entry, 'id' ), 'hannanstd_part_email_' . $form['id'] );
-				$Mobile    = gform_get_meta( rgar( $entry, 'id' ), 'hannanstd_part_mobile_' . $form['id'] );
+				$Paymenter = gform_get_meta( rgar( $entry, 'id' ), 'zibal_part_name_' . $form['id'] );
+				$Email     = gform_get_meta( rgar( $entry, 'id' ), 'zibal_part_email_' . $form['id'] );
+				$Mobile    = gform_get_meta( rgar( $entry, 'id' ), 'zibal_part_mobile_' . $form['id'] );
 
 				$entry_id = GFAPI::add_entry( $entry );
 				$entry    = GFPersian_Payments::get_entry( $entry_id );
@@ -2241,7 +2241,7 @@ class GFPersian_Gateway_Zibal {
 			}
 
 			if ( $payment_type == 'custom' ) {
-				$Amount = $Total = gform_get_meta( $entry["id"], 'hannanstd_part_price_' . $form_id );
+				$Amount = $Total = gform_get_meta( $entry["id"], 'zibal_part_price_' . $form_id );
 			} else {
 				$Amount = $Total = self::get_order_total( $form, $entry );
 			}

@@ -2,7 +2,7 @@
 
 class GFPersian_Chart_Zibal {
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function stats_page() {
 
 		if ( ! empty( $_POST ) ) {
@@ -213,126 +213,126 @@ class GFPersian_Chart_Zibal {
 				case "spring" :
 					$chart_info          = self::season_chart_info( $form_id, 1, 1 );
 					$chart_info_gateways = self::season_chart_info( $form_id, 2, 1 );
-					$chart_info_hannan   = self::season_chart_info( $form_id, 3, 1 );
+					$chart_info_zibal   = self::season_chart_info( $form_id, 3, 1 );
 					$chart_info_site     = self::season_chart_info( $form_id, 4, 1 );
 					break;
 
 				case "summer" :
 					$chart_info          = self::season_chart_info( $form_id, 1, 2 );
 					$chart_info_gateways = self::season_chart_info( $form_id, 2, 2 );
-					$chart_info_hannan   = self::season_chart_info( $form_id, 3, 2 );
+					$chart_info_zibal   = self::season_chart_info( $form_id, 3, 2 );
 					$chart_info_site     = self::season_chart_info( $form_id, 4, 2 );
 					break;
 
 				case "fall" :
 					$chart_info          = self::season_chart_info( $form_id, 1, 3 );
 					$chart_info_gateways = self::season_chart_info( $form_id, 2, 3 );
-					$chart_info_hannan   = self::season_chart_info( $form_id, 3, 3 );
+					$chart_info_zibal   = self::season_chart_info( $form_id, 3, 3 );
 					$chart_info_site     = self::season_chart_info( $form_id, 4, 3 );
 					break;
 
 				case "winter" :
 					$chart_info          = self::season_chart_info( $form_id, 1, 4 );
 					$chart_info_gateways = self::season_chart_info( $form_id, 2, 4 );
-					$chart_info_hannan   = self::season_chart_info( $form_id, 3, 4 );
+					$chart_info_zibal   = self::season_chart_info( $form_id, 3, 4 );
 					$chart_info_site     = self::season_chart_info( $form_id, 4, 4 );
 					break;
 
 				case "thisyear" :
 					$chart_info          = self::yearly_chart_info( $form_id, 1 );
 					$chart_info_gateways = self::yearly_chart_info( $form_id, 2 );
-					$chart_info_hannan   = self::yearly_chart_info( $form_id, 3 );
+					$chart_info_zibal   = self::yearly_chart_info( $form_id, 3 );
 					$chart_info_site     = self::yearly_chart_info( $form_id, 4 );
 					break;
 
 				case "last7days" :
 					$chart_info          = self::lastxdays_chart_info( $form_id, 1, 7 );
 					$chart_info_gateways = self::lastxdays_chart_info( $form_id, 2, 7 );
-					$chart_info_hannan   = self::lastxdays_chart_info( $form_id, 3, 7 );
+					$chart_info_zibal   = self::lastxdays_chart_info( $form_id, 3, 7 );
 					$chart_info_site     = self::lastxdays_chart_info( $form_id, 4, 7 );
 					break;
 
 				case "thisweek" :
 					$chart_info          = self::thisweek_chart_info( $form_id, 1 );
 					$chart_info_gateways = self::thisweek_chart_info( $form_id, 2 );
-					$chart_info_hannan   = self::thisweek_chart_info( $form_id, 3 );
+					$chart_info_zibal   = self::thisweek_chart_info( $form_id, 3 );
 					$chart_info_site     = self::thisweek_chart_info( $form_id, 4 );
 					break;
 
 				case "last30days" :
 					$chart_info          = self::lastxdays_chart_info( $form_id, 1, 30 );
 					$chart_info_gateways = self::lastxdays_chart_info( $form_id, 2, 30 );
-					$chart_info_hannan   = self::lastxdays_chart_info( $form_id, 3, 30 );
+					$chart_info_zibal   = self::lastxdays_chart_info( $form_id, 3, 30 );
 					$chart_info_site     = self::lastxdays_chart_info( $form_id, 4, 30 );
 					break;
 
 				case "thismonth" :
 					$chart_info          = self::targetmdays_chart_info( $form_id, 1, 1 );
 					$chart_info_gateways = self::targetmdays_chart_info( $form_id, 2, 1 );
-					$chart_info_hannan   = self::targetmdays_chart_info( $form_id, 3, 1 );
+					$chart_info_zibal   = self::targetmdays_chart_info( $form_id, 3, 1 );
 					$chart_info_site     = self::targetmdays_chart_info( $form_id, 4, 1 );
 					break;
 
 				case "lastmonth" :
 					$chart_info          = self::targetmdays_chart_info( $form_id, 1, 2 );
 					$chart_info_gateways = self::targetmdays_chart_info( $form_id, 2, 2 );
-					$chart_info_hannan   = self::targetmdays_chart_info( $form_id, 3, 2 );
+					$chart_info_zibal   = self::targetmdays_chart_info( $form_id, 3, 2 );
 					$chart_info_site     = self::targetmdays_chart_info( $form_id, 4, 2 );
 					break;
 
 				case "last2month" :
 					$chart_info          = self::targetmdays_chart_info( $form_id, 1, 60 );
 					$chart_info_gateways = self::targetmdays_chart_info( $form_id, 2, 60 );
-					$chart_info_hannan   = self::targetmdays_chart_info( $form_id, 3, 60 );
+					$chart_info_zibal   = self::targetmdays_chart_info( $form_id, 3, 60 );
 					$chart_info_site     = self::targetmdays_chart_info( $form_id, 4, 60 );
 					break;
 
 				case "last3month" :
 					$chart_info          = self::targetmdays_chart_info( $form_id, 1, 3 );
 					$chart_info_gateways = self::targetmdays_chart_info( $form_id, 2, 3 );
-					$chart_info_hannan   = self::targetmdays_chart_info( $form_id, 3, 3 );
+					$chart_info_zibal   = self::targetmdays_chart_info( $form_id, 3, 3 );
 					$chart_info_site     = self::targetmdays_chart_info( $form_id, 4, 3 );
 					break;
 
 				case "last6month" :
 					$chart_info          = self::targetmdays_chart_info( $form_id, 1, 6 );
 					$chart_info_gateways = self::targetmdays_chart_info( $form_id, 2, 6 );
-					$chart_info_hannan   = self::targetmdays_chart_info( $form_id, 3, 6 );
+					$chart_info_zibal   = self::targetmdays_chart_info( $form_id, 3, 6 );
 					$chart_info_site     = self::targetmdays_chart_info( $form_id, 4, 6 );
 					break;
 
 				case "last9month" :
 					$chart_info          = self::targetmdays_chart_info( $form_id, 1, 9 );
 					$chart_info_gateways = self::targetmdays_chart_info( $form_id, 2, 9 );
-					$chart_info_hannan   = self::targetmdays_chart_info( $form_id, 3, 9 );
+					$chart_info_zibal   = self::targetmdays_chart_info( $form_id, 3, 9 );
 					$chart_info_site     = self::targetmdays_chart_info( $form_id, 4, 9 );
 					break;
 
 				case "last12month" :
 					$chart_info          = self::targetmdays_chart_info( $form_id, 1, 12 );
 					$chart_info_gateways = self::targetmdays_chart_info( $form_id, 2, 12 );
-					$chart_info_hannan   = self::targetmdays_chart_info( $form_id, 3, 12 );
+					$chart_info_zibal   = self::targetmdays_chart_info( $form_id, 3, 12 );
 					$chart_info_site     = self::targetmdays_chart_info( $form_id, 4, 12 );
 					break;
 
 				case "selection" :
 					$chart_info          = self::selection_chart_info( $form_id, 1, sanitize_text_field( rgpost( 'min' ) ), sanitize_text_field( rgpost( 'max' ) ) );
 					$chart_info_gateways = self::selection_chart_info( $form_id, 2, sanitize_text_field( rgpost( 'min' ) ), sanitize_text_field( rgpost( 'max' ) ) );
-					$chart_info_hannan   = self::selection_chart_info( $form_id, 3, sanitize_text_field( rgpost( 'min' ) ), sanitize_text_field( rgpost( 'max' ) ) );
+					$chart_info_zibal   = self::selection_chart_info( $form_id, 3, sanitize_text_field( rgpost( 'min' ) ), sanitize_text_field( rgpost( 'max' ) ) );
 					$chart_info_site     = self::selection_chart_info( $form_id, 4, sanitize_text_field( rgpost( 'min' ) ), sanitize_text_field( rgpost( 'max' ) ) );
 					break;
 
 				case "yesterday" :
 					$chart_info          = self::tyday_chart_info( $form_id, 1, 2 );
 					$chart_info_gateways = self::tyday_chart_info( $form_id, 2, 2 );
-					$chart_info_hannan   = self::tyday_chart_info( $form_id, 3, 2 );
+					$chart_info_zibal   = self::tyday_chart_info( $form_id, 3, 2 );
 					$chart_info_site     = self::tyday_chart_info( $form_id, 4, 2 );
 					break;
 
 				default :
 					$chart_info          = self::tyday_chart_info( $form_id, 1, 1 );
 					$chart_info_gateways = self::tyday_chart_info( $form_id, 2, 1 );
-					$chart_info_hannan   = self::tyday_chart_info( $form_id, 3, 1 );
+					$chart_info_zibal   = self::tyday_chart_info( $form_id, 3, 1 );
 					$chart_info_site     = self::tyday_chart_info( $form_id, 4, 1 );
 					break;
 			}
@@ -461,7 +461,7 @@ class GFPersian_Chart_Zibal {
             <div class="clear"></div>
             <h2><?php _e( " کل درآمد های زیبال", "gravityformszibal" ) ?></h2>
             <div>
-				<?php if ( ! $chart_info_hannan["series"] ) { ?>
+				<?php if ( ! $chart_info_zibal["series"] ) { ?>
                     <div
                             class="zibal_message_container"><?php _e( "موردی یافت نشد . ", "gravityformszibal" ) ?></div>
 				<?php } else { ?>
@@ -486,15 +486,15 @@ class GFPersian_Chart_Zibal {
                     </div>
 
                     <div class="zibal_summary_item">
-                        <div class="zibal_summary_title"><?php echo $chart_info_hannan["revenue_label"] ?></div>
+                        <div class="zibal_summary_title"><?php echo $chart_info_zibal["revenue_label"] ?></div>
                         <div
-                                class="zibal_summary_value"><?php echo GF_tr_num( $chart_info_hannan["revenue"], 'fa' ) ?></div>
+                                class="zibal_summary_value"><?php echo GF_tr_num( $chart_info_zibal["revenue"], 'fa' ) ?></div>
                     </div>
 
                     <div class="zibal_summary_item">
-                        <div class="zibal_summary_title"><?php echo $chart_info_hannan["mid_label"] ?></div>
+                        <div class="zibal_summary_title"><?php echo $chart_info_zibal["mid_label"] ?></div>
                         <div
-                                class="zibal_summary_value"><?php echo GF_tr_num( $chart_info_hannan["mid"], 'fa' ) ?></div>
+                                class="zibal_summary_value"><?php echo GF_tr_num( $chart_info_zibal["mid"], 'fa' ) ?></div>
                     </div>
 
                     <div class="zibal_summary_item">
@@ -503,15 +503,15 @@ class GFPersian_Chart_Zibal {
                     </div>
 
                     <div class="zibal_summary_item">
-                        <div class="zibal_summary_title"><?php echo $chart_info_hannan["sales_label"] ?></div>
+                        <div class="zibal_summary_title"><?php echo $chart_info_zibal["sales_label"] ?></div>
                         <div
-                                class="zibal_summary_value"><?php echo GF_tr_num( $chart_info_hannan["sales"], 'fa' ) ?></div>
+                                class="zibal_summary_value"><?php echo GF_tr_num( $chart_info_zibal["sales"], 'fa' ) ?></div>
                     </div>
 
                     <div class="zibal_summary_item">
-                        <div class="zibal_summary_title"><?php echo $chart_info_hannan["midt_label"] ?></div>
+                        <div class="zibal_summary_title"><?php echo $chart_info_zibal["midt_label"] ?></div>
                         <div
-                                class="zibal_summary_value"><?php echo GF_tr_num( $chart_info_hannan["midt"], 'fa' ) ?></div>
+                                class="zibal_summary_value"><?php echo GF_tr_num( $chart_info_zibal["midt"], 'fa' ) ?></div>
                     </div>
                 </div>
             </div>
@@ -604,11 +604,11 @@ class GFPersian_Chart_Zibal {
 			<?php endif;?>
 
 
-			<?php if (! empty( $chart_info_hannan["series"] )) :?>
-            var zibal_graph_tooltip1s1 = <?php echo GF_tr_num( $chart_info_hannan["tooltips"], 'fa' ) ?>;
-            jQuery.plot(jQuery("#graph_placeholder1"), [<?php echo $chart_info_hannan["series"] ?>], <?php echo $chart_info["options"] ?>);
+			<?php if (! empty( $chart_info_zibal["series"] )) :?>
+            var zibal_graph_tooltip1s1 = <?php echo GF_tr_num( $chart_info_zibal["tooltips"], 'fa' ) ?>;
+            jQuery.plot(jQuery("#graph_placeholder1"), [<?php echo $chart_info_zibal["series"] ?>], <?php echo $chart_info["options"] ?>);
             jQuery(window).resize(function () {
-                jQuery.plot(jQuery("#graph_placeholder1"), [<?php echo $chart_info_hannan["series"] ?>], <?php echo $chart_info["options"] ?>);
+                jQuery.plot(jQuery("#graph_placeholder1"), [<?php echo $chart_info_zibal["series"] ?>], <?php echo $chart_info["options"] ?>);
             });
             var previousPoint = null;
             jQuery("#graph_placeholder1").bind("plothover", function (event, pos, item) {
@@ -707,7 +707,7 @@ class GFPersian_Chart_Zibal {
 		<?php
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function get_graph_timestamp( $local_datetime ) {
 		$local_timestamp      = mysql2date( "G", $local_datetime );
 		$local_date_timestamp = mysql2date( "G", gmdate( "Y-m-d 23:59:59", $local_timestamp ) );
@@ -746,7 +746,7 @@ class GFPersian_Chart_Zibal {
 		return array( 'tz' => $time_zone, 'today' => $today );
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function lastxdays_chart_info( $form_id, $chart, $x ) {
 
 		global $wpdb;
@@ -894,7 +894,7 @@ class GFPersian_Chart_Zibal {
 	}
 
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function thisweek_chart_info( $form_id, $chart ) {
 
 		global $wpdb;
@@ -1101,7 +1101,7 @@ class GFPersian_Chart_Zibal {
 	}
 
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function targetmdays_chart_info( $form_id, $chart, $xmonth ) {
 
 		global $wpdb;
@@ -1346,7 +1346,7 @@ class GFPersian_Chart_Zibal {
 	}
 
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function tyday_chart_info( $form_id, $chart, $day ) {
 
 		global $wpdb;
@@ -1493,7 +1493,7 @@ class GFPersian_Chart_Zibal {
 		);
 	}
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function yearly_chart_info( $form_id, $chart ) {
 
 		global $wpdb;
@@ -1634,7 +1634,7 @@ class GFPersian_Chart_Zibal {
 	}
 
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function season_chart_info( $form_id, $chart, $season ) {
 
 		global $wpdb;
@@ -1819,7 +1819,7 @@ class GFPersian_Chart_Zibal {
 	}
 
 
-	// ------------------------GravityForms.IR-------------------------
+	
 	public static function selection_chart_info( $form_id, $chart, $min, $max ) {
 
 		global $wpdb;
@@ -1982,6 +1982,6 @@ class GFPersian_Chart_Zibal {
 			"midt"          => $midt
 		);
 	}
-	// ------------------------GravityForms.IR-------------------------
+	
 
 }
