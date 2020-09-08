@@ -14,7 +14,7 @@ class GFPersian_Gateway_Zibal {
 	public static $author = "Zibal";
 
 	
-	private static $version = "2.3.0";
+	private static $version = "1.0.1";
 	private static $min_gravityforms_version = "1.9.10";
 	private static $config = null;
 
