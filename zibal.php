@@ -735,7 +735,7 @@ class GFPersian_Gateway_Zibal {
 		return $fields;
 	}
 
-	--------------------------------------------
+	// --------------------------------------------
 	//desc
 	private static function get_customer_information_desc( $form, $config = null ) {
 		$form_fields    = self::get_form_fields( $form );
