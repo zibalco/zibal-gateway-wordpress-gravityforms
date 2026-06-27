@@ -11,11 +11,13 @@ class GFPersian_Chart_Zibal
 			check_admin_referer("search", "gf_zibal_chart");
 		}
 
-		$form_id = rgget("id");
+		$form_id = absint(rgget("id"));
 		$form    = RGFormsModel::get_form_meta($form_id);
 		if (empty($form) || !is_numeric($form_id) || intval($form_id) != $form_id) {
 			die(__('فرم درخواستی وجود ندارد.', 'gravityformszibal'));
 		}
+		$current_tab = sanitize_key(rgget("tab"));
+		$stats_url   = admin_url('admin.php');
 ?>
 		<style type="text/css">
 			.zibal_graph_container {
@@ -119,7 +121,7 @@ class GFPersian_Chart_Zibal
 		do_action('gf_gateway_js');
 		?>
 
-		<script type="text/javascript" src="<?php echo GFPersian_Payments::get_base_url() ?>/assets/js/shamsi_chart.js"></script>
+		<script type="text/javascript" src="<?php echo esc_url(GFPersian_Payments::get_base_url() . '/assets/js/shamsi_chart.js') ?>"></script>
 		<script type="text/javascript">
 			var dp = jQuery.noConflict();
 			dp(document).ready(function() {
@@ -133,63 +135,63 @@ class GFPersian_Chart_Zibal
 		</script>
 		<div class="wrap">
 			<ul class="subsubsub">
-				<li><a class="<?php echo (!rgget("tab") || rgget("tab") == "today") ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>"><?php _e("امروز", "gravityformszibal"); ?></a>
+				<li><a class="<?php echo (!$current_tab || $current_tab == "today") ? "current" : "" ?>" href="<?php echo esc_url(add_query_arg(array('page' => 'gf_zibal', 'view' => 'stats', 'id' => $form_id), $stats_url)) ?>"><?php _e("امروز", "gravityformszibal"); ?></a>
 					|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "yesterday" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=yesterday"><?php _e("دیروز", "gravityformszibal"); ?></a>
+				<li><a class="<?php echo $current_tab == "yesterday" ? "current" : "" ?>" href="<?php echo esc_url(add_query_arg(array('page' => 'gf_zibal', 'view' => 'stats', 'id' => $form_id, 'tab' => 'yesterday'), $stats_url)) ?>"><?php _e("دیروز", "gravityformszibal"); ?></a>
 					|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "last7days" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=last7days"><?php _e("هفت روز گذشته", "gravityformszibal"); ?></a>
+				<li><a class="<?php echo $current_tab == "last7days" ? "current" : "" ?>" href="<?php echo esc_url(add_query_arg(array('page' => 'gf_zibal', 'view' => 'stats', 'id' => $form_id, 'tab' => 'last7days'), $stats_url)) ?>"><?php _e("هفت روز گذشته", "gravityformszibal"); ?></a>
 					|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "thisweek" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=thisweek"><?php _e("هفته جاری", "gravityformszibal"); ?></a>
+				<li><a class="<?php echo $current_tab == "thisweek" ? "current" : "" ?>" href="<?php echo esc_url(add_query_arg(array('page' => 'gf_zibal', 'view' => 'stats', 'id' => $form_id, 'tab' => 'thisweek'), $stats_url)) ?>"><?php _e("هفته جاری", "gravityformszibal"); ?></a>
 					|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "last30days" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=last30days"><?php _e("30 روز گذشته", "gravityformszibal"); ?></a>
+				<li><a class="<?php echo $current_tab == "last30days" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=last30days"><?php _e("30 روز گذشته", "gravityformszibal"); ?></a>
 					|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "thismonth" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=thismonth"><?php _e("ماه جاری", "gravityformszibal"); ?></a>|
+				<li><a class="<?php echo $current_tab == "thismonth" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=thismonth"><?php _e("ماه جاری", "gravityformszibal"); ?></a>|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "lastmonth" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=lastmonth"><?php _e("ماه قبل", "gravityformszibal"); ?></a>|
+				<li><a class="<?php echo $current_tab == "lastmonth" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=lastmonth"><?php _e("ماه قبل", "gravityformszibal"); ?></a>|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "last2month" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=last2month"><?php _e("2 ماه اخیر", "gravityformszibal"); ?></a>
+				<li><a class="<?php echo $current_tab == "last2month" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=last2month"><?php _e("2 ماه اخیر", "gravityformszibal"); ?></a>
 					|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "last3month" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=last3month"><?php _e("3 ماه اخیر", "gravityformszibal"); ?></a>
+				<li><a class="<?php echo $current_tab == "last3month" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=last3month"><?php _e("3 ماه اخیر", "gravityformszibal"); ?></a>
 					|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "last6month" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=last6month"><?php _e("6 ماه اخیر", "gravityformszibal"); ?></a>
+				<li><a class="<?php echo $current_tab == "last6month" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=last6month"><?php _e("6 ماه اخیر", "gravityformszibal"); ?></a>
 					|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "last9month" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=last9month"><?php _e("9 ماه اخیر", "gravityformszibal"); ?></a>
+				<li><a class="<?php echo $current_tab == "last9month" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=last9month"><?php _e("9 ماه اخیر", "gravityformszibal"); ?></a>
 					|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "last12month" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=last12month"><?php _e("یک سال اخیر", "gravityformszibal"); ?></a>
+				<li><a class="<?php echo $current_tab == "last12month" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=last12month"><?php _e("یک سال اخیر", "gravityformszibal"); ?></a>
 					|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "spring" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=spring"><?php _e("بهار", "gravityformszibal"); ?></a>|
+				<li><a class="<?php echo $current_tab == "spring" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=spring"><?php _e("بهار", "gravityformszibal"); ?></a>|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "summer" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=summer"><?php _e("تابستان", "gravityformszibal"); ?></a>|
+				<li><a class="<?php echo $current_tab == "summer" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=summer"><?php _e("تابستان", "gravityformszibal"); ?></a>|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "fall" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=fall"><?php _e("پاییز", "gravityformszibal"); ?></a>|
+				<li><a class="<?php echo $current_tab == "fall" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=fall"><?php _e("پاییز", "gravityformszibal"); ?></a>|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "winter" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=winter"><?php _e("زمستان", "gravityformszibal"); ?></a>|
+				<li><a class="<?php echo $current_tab == "winter" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=winter"><?php _e("زمستان", "gravityformszibal"); ?></a>|
 				</li>
-				<li><a class="<?php echo rgget("tab") == "thisyear" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo rgget('id') ?>&tab=thisyear"><?php _e("امسال", "gravityformszibal"); ?></a>
+				<li><a class="<?php echo $current_tab == "thisyear" ? "current" : "" ?>" href="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=thisyear"><?php _e("امسال", "gravityformszibal"); ?></a>
 				</li>
 				<br /><br />
-				<form method="post" action="?page=gf_zibal&view=stats&id=<?php echo rgget("id") ?>&tab=selection"><?php wp_nonce_field("search", "gf_zibal_chart") ?>
+				<form method="post" action="?page=gf_zibal&view=stats&id=<?php echo $form_id ?>&tab=selection"><?php wp_nonce_field("search", "gf_zibal_chart") ?>
 					<span><?php _e('از تاریخ', 'gravityformszibal') ?></span>
-					<input type="text" name="min" class="datepicker" value="<?php echo sanitize_text_field(rgpost('min')); ?>" autocomplete="off" />
+					<input type="text" name="min" class="datepicker" value="<?php echo esc_attr(sanitize_text_field(rgpost('min'))); ?>" autocomplete="off" />
 					<span style="margin-right:15px"><?php _e('تا تاریخ', 'gravityformszibal') ?></span>
-					<input type="text" name="max" class="datepicker" value="<?php echo sanitize_text_field(rgpost('max')); ?>" autocomplete="off" />
+					<input type="text" name="max" class="datepicker" value="<?php echo esc_attr(sanitize_text_field(rgpost('max'))); ?>" autocomplete="off" />
 					<input type="submit" class="button-primary button" name="submit" value="<?php _e('انتخاب', 'gravityformszibal') ?>"><br>
 				</form>
 			</ul>
 
 			<div class="clear"></div>
 			<?php
-			switch (rgget("tab")) {
+			switch ($current_tab) {
 
 				case "spring":
 					$chart_info          = self::season_chart_info($form_id, 1, 1);
@@ -322,7 +324,7 @@ class GFPersian_Chart_Zibal
 			<hr>
 
 			<div class="clear"></div>
-			<h2><?php _e(" درآمد از درگاه زیبال برای فرمِ ", "gravityformszibal") ?><?php echo '"' . $form["title"] . '"'; ?></h2>
+			<h2><?php _e(" درآمد از درگاه زیبال برای فرمِ ", "gravityformszibal") ?><?php echo '"' . esc_html($form["title"]) . '"'; ?></h2>
 			<div>
 				<?php if (empty($chart_info["series"])) { ?>
 					<div class="zibal_message_container"><?php _e("موردی یافت نشد . ", "gravityformszibal") ?></div>
@@ -376,7 +378,7 @@ class GFPersian_Chart_Zibal
 
 			<hr>
 			<div class="clear"></div>
-			<h2><?php _e(" درآمد از همه روشها برای فرمِ ", "gravityformszibal") ?><?php echo '"' . $form["title"] . '"'; ?></h2>
+			<h2><?php _e(" درآمد از همه روشها برای فرمِ ", "gravityformszibal") ?><?php echo '"' . esc_html($form["title"]) . '"'; ?></h2>
 			<div>
 				<?php if (!$chart_info_gateways["series"]) { ?>
 					<div class="zibal_message_container"><?php _e("موردی یافت نشد . ", "gravityformszibal") ?></div>
