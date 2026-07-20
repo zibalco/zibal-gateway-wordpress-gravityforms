@@ -14,7 +14,7 @@ class GFPersian_Gateway_Zibal
 	public static $author = "Zibal";
 
 
-	private static $version = "1.2.1";
+	private static $version = "1.2.3";
 	private static $min_gravityforms_version = "1.9.10";
 	private static $config = null;
 
@@ -81,6 +81,7 @@ class GFPersian_Gateway_Zibal
 		}
 
 		add_filter("gform_logging_supported", array(__CLASS__, "set_logging_supported"));
+		add_filter('gform_is_value_match', array(__CLASS__, 'match_payment_status_condition'), 20, 6);
 
 		// --------------------------------------------------------------------------------------------
 		add_filter('gf_payment_gateways', array(__CLASS__, 'gravityformszibal'), 2);
@@ -493,55 +494,265 @@ class GFPersian_Gateway_Zibal
 	}
 
 
-	private static function prepare_payment_confirmation_form($form, $status)
+	private static function normalize_payment_status_for_condition($status)
 	{
-		$result = strtolower((string) $status) === 'completed' ? 'success' : 'failure';
-		if (empty($form['confirmations']) || !is_array($form['confirmations'])) {
-			return $form;
+		$status = strtolower(trim((string) $status));
+
+		if (in_array($status, array('completed', 'success', 'successful', 'paid', 'active', 'actived', 'approved'), true)) {
+			return 'completed';
 		}
 
-		$original_confirmations = $form['confirmations'];
-		$confirmations = array();
-		$default_confirmation = null;
+		if (in_array($status, array('failed', 'failure', 'cancelled', 'canceled'), true)) {
+			return 'failed';
+		}
 
-		foreach ($original_confirmations as $confirmation_id => $confirmation) {
+		return $status;
+	}
+
+
+	public static function match_payment_status_condition($is_match, $field_value, $target_value, $operation, $source_field = null, $rule = null)
+	{
+		$field_id = is_array($rule) ? (string) rgar($rule, 'fieldId') : '';
+		if ($field_id === '' && is_array($source_field)) {
+			$field_id = (string) rgar($source_field, 'fieldId');
+		} elseif ($field_id === '' && is_object($source_field) && isset($source_field->fieldId)) {
+			$field_id = (string) $source_field->fieldId;
+		}
+
+		if ($field_id !== 'payment_status' || !in_array($operation, array('is', 'isnot'), true)) {
+			return $is_match;
+		}
+
+		$field_value = self::normalize_payment_status_for_condition($field_value);
+		$target_value = self::normalize_payment_status_for_condition($target_value);
+
+		return $operation === 'isnot' ? $field_value !== $target_value : $field_value === $target_value;
+	}
+
+
+	private static function confirmation_matches_entry($confirmation, $form, $entry)
+	{
+		$logic = rgar($confirmation, 'conditionalLogic');
+		$rules = is_array($logic) ? rgar($logic, 'rules') : array();
+		if (empty($rules) || !is_array($rules)) {
+			return false;
+		}
+
+		if (class_exists('GFFormsModel') && is_callable(array('GFFormsModel', 'evaluate_conditional_logic'))) {
+			return GFFormsModel::evaluate_conditional_logic($logic, $form, $entry);
+		}
+
+		if (class_exists('RGFormsModel') && is_callable(array('RGFormsModel', 'evaluate_conditional_logic'))) {
+			return RGFormsModel::evaluate_conditional_logic($logic, $form, $entry);
+		}
+
+		$matches = array();
+		foreach ($rules as $rule) {
+			$field_id = (string) rgar($rule, 'fieldId');
+			$operation = (string) rgar($rule, 'operator');
+			$target_value = rgar($rule, 'value');
+			$field_value = rgar($entry, $field_id);
+
+			if ($field_id === 'payment_status') {
+				$matches[] = self::match_payment_status_condition(false, $field_value, $target_value, $operation, null, $rule);
+			} elseif (class_exists('GFFormsModel') && method_exists('GFFormsModel', 'is_value_match')) {
+				$matches[] = GFFormsModel::is_value_match($field_value, $target_value, $operation);
+			} else {
+				$matches[] = RGFormsModel::is_value_match($field_value, $target_value, $operation);
+			}
+		}
+
+		$logic_type = strtolower((string) rgar($logic, 'logicType'));
+		$is_match = $logic_type === 'any' ? in_array(true, $matches, true) : !in_array(false, $matches, true);
+		$action_type = strtolower((string) rgar($logic, 'actionType'));
+
+		return $action_type === 'hide' ? !$is_match : $is_match;
+	}
+
+
+	private static function get_payment_confirmation_form($form, $entry, $status)
+	{
+		$payment_result = self::normalize_payment_status_for_condition($status) === 'completed' ? 'success' : 'failure';
+		$confirmations = rgar($form, 'confirmations');
+		$selected = null;
+		$default = null;
+
+		foreach ((array) $confirmations as $confirmation_id => $confirmation) {
 			if (!is_array($confirmation)) {
 				continue;
 			}
 
 			$is_default = !empty($confirmation['isDefault']) || $confirmation_id === 'default';
-			if ($is_default && $default_confirmation === null) {
-				$default_confirmation = array($confirmation_id, $confirmation);
+			if ($is_default && $default === null) {
+				$default = $confirmation;
 			}
 
 			$target_result = self::sanitize_confirmation_payment_result(rgar($confirmation, 'zibalPaymentResult'));
-			if ($is_default || $target_result === 'all' || $target_result === $result) {
-				$confirmations[$confirmation_id] = $confirmation;
+			if ($target_result !== 'all' && $target_result !== $payment_result) {
+				continue;
+			}
+
+			$logic = rgar($confirmation, 'conditionalLogic');
+			$rules = is_array($logic) ? rgar($logic, 'rules') : array();
+			if (!empty($rules)) {
+				if (self::confirmation_matches_entry($confirmation, $form, $entry)) {
+					$selected = $confirmation;
+					break;
+				}
+			} elseif (!$is_default && $target_result !== 'all') {
+				$selected = $confirmation;
+				break;
 			}
 		}
 
-		if (empty($confirmations)) {
-			if ($default_confirmation !== null) {
-				$confirmations[$default_confirmation[0]] = $default_confirmation[1];
-			} else {
-				$confirmations = $original_confirmations;
+		if ($selected === null && $default !== null) {
+			$default_result = self::sanitize_confirmation_payment_result(rgar($default, 'zibalPaymentResult'));
+			if ($payment_result === 'success' && in_array($default_result, array('all', 'success'), true)) {
+				$selected = $default;
+			} elseif ($payment_result === 'failure' && $default_result === 'failure') {
+				$selected = $default;
 			}
 		}
 
-		$form['confirmations'] = $confirmations;
+		if ($selected === null) {
+			$is_success = $payment_result === 'success';
+			$default_message = $is_success
+				? __('پرداخت با موفقیت انجام شد.', 'gravityformszibal')
+				: __('پرداخت ناموفق بود یا توسط شما لغو شد. لطفاً دوباره تلاش کنید.', 'gravityformszibal');
+			$default_message = apply_filters('gform_zibal_default_payment_confirmation_message', $default_message, $payment_result, $form, $entry);
+			$selected = array(
+				'id'                => 'zibal-payment-' . ($is_success ? 'success' : 'failed'),
+				'name'              => $is_success ? __('پرداخت موفق', 'gravityformszibal') : __('پرداخت ناموفق', 'gravityformszibal'),
+				'isDefault'         => true,
+				'type'              => 'message',
+				'message'           => wp_kses_post((string) $default_message),
+				'disableAutoformat' => false,
+			);
+		}
+
+		$selected = apply_filters('gform_zibal_selected_payment_confirmation', $selected, $payment_result, $form, $entry);
+		if (!is_array($selected)) {
+			return $form;
+		}
+
+		unset($selected['conditionalLogic']);
+		$selected['isDefault'] = true;
+		$confirmation_id = !empty($selected['id']) ? sanitize_key((string) $selected['id']) : 'zibal-payment-result';
+		$selected['id'] = $confirmation_id;
+		$form['confirmations'] = array($confirmation_id => $selected);
+		$form['confirmation'] = $selected;
 
 		return $form;
 	}
 
 
-	private static function show_payment_confirmation($form, $entry, $status, $message = '')
+	private static function get_payment_confirmation_message($confirmation_form, $entry, $payment_result, $apply_confirmation_filters = true)
 	{
-		$result = strtolower((string) $status) === 'completed' ? 'success' : 'failure';
-		gform_update_meta($entry['id'], 'zibal_payment_result', $result);
-		$entry['zibal_payment_result'] = $result;
-		$form = self::prepare_payment_confirmation_form($form, $status);
+		$selected = rgar($confirmation_form, 'confirmation');
+		$message = is_array($selected) ? (string) rgar($selected, 'message') : '';
+		if ($message === '') {
+			$message = $payment_result === 'success'
+				? __('پرداخت با موفقیت انجام شد.', 'gravityformszibal')
+				: __('پرداخت ناموفق بود یا توسط شما لغو شد. لطفاً دوباره تلاش کنید.', 'gravityformszibal');
+		}
 
-		GFPersian_Payments::confirmation($form, $entry, $message);
+		$disable_autoformat = is_array($selected) && !empty($selected['disableAutoformat']);
+		$message = GFCommon::replace_variables($message, $confirmation_form, $entry, false, true, !$disable_autoformat);
+		if ($apply_confirmation_filters) {
+			$message = apply_filters('gform_confirmation', $message, $confirmation_form, $entry, false);
+			$message = apply_filters('gform_confirmation_' . absint(rgar($confirmation_form, 'id')), $message, $confirmation_form, $entry, false);
+		}
+
+		if (!is_string($message) || trim($message) === '') {
+			$message = $payment_result === 'success'
+				? __('پرداخت با موفقیت انجام شد.', 'gravityformszibal')
+				: __('پرداخت ناموفق بود یا توسط شما لغو شد. لطفاً دوباره تلاش کنید.', 'gravityformszibal');
+		}
+
+		return $message;
+	}
+
+
+	private static function get_payment_confirmation_return($form, $entry, $status, $ajax)
+	{
+		$payment_result = self::normalize_payment_status_for_condition($status) === 'completed' ? 'success' : 'failure';
+		$confirmation_form = self::get_payment_confirmation_form($form, $entry, $status);
+		$selected = rgar($confirmation_form, 'confirmation');
+		$type = is_array($selected) ? (string) rgar($selected, 'type') : 'message';
+
+		if ($type === 'redirect' || $type === 'page') {
+			$url = $type === 'page' ? get_permalink(absint(rgar($selected, 'pageId'))) : (string) rgar($selected, 'url');
+			$query_string = trim((string) rgar($selected, 'queryString'), "?& \t\n\r\0\x0B");
+			$url = GFCommon::replace_variables($url, $confirmation_form, $entry, false, true, false);
+			$query_string = GFCommon::replace_variables($query_string, $confirmation_form, $entry, false, true, false);
+			if ($url !== '') {
+				if ($query_string !== '') {
+					$url .= (strpos($url, '?') === false ? '?' : '&') . $query_string;
+				}
+
+				return self::redirect_confirmation($url, $ajax);
+			}
+		}
+
+		$message = self::get_payment_confirmation_message($confirmation_form, $entry, $payment_result, false);
+		$message = apply_filters('gform_zibal_request_failure_confirmation', $message, $confirmation_form, $entry);
+		$form_id = absint(rgar($confirmation_form, 'id'));
+		$default_anchor = 0;
+		$anchor = gf_apply_filters('gform_confirmation_anchor', $form_id, $default_anchor)
+			? sprintf('<a id="gf_%1$d" name="gf_%1$d" class="gform_anchor"></a>', $form_id)
+			: '';
+		$css_classes = preg_split('/\s+/', (string) rgar($confirmation_form, 'cssClass'));
+		$css_classes = array_filter(array_map('sanitize_html_class', $css_classes));
+
+		return sprintf(
+			'%1$s<div id="gform_confirmation_wrapper_%2$d" class="gform_confirmation_wrapper %3$s"><div id="gform_confirmation_message_%2$d" class="gform_confirmation_message_%2$d gform_confirmation_message">%4$s</div></div>',
+			$anchor,
+			$form_id,
+			esc_attr(implode(' ', $css_classes)),
+			$message
+		);
+	}
+
+
+	private static function display_payment_confirmation($form, $entry, $status, $message = '')
+	{
+		$payment_result = self::normalize_payment_status_for_condition($status) === 'completed' ? 'success' : 'failure';
+		if (!empty($entry['id'])) {
+			gform_update_meta($entry['id'], 'zibal_payment_result', $payment_result);
+		}
+		$entry['zibal_payment_result'] = $payment_result;
+		$confirmation_form = self::get_payment_confirmation_form($form, $entry, $status);
+		$selected = rgar($confirmation_form, 'confirmation');
+
+		if (!is_array($selected) || (string) rgar($selected, 'type') !== 'message' || !class_exists('GFFormDisplay')) {
+			GFPersian_Payments::confirmation($confirmation_form, $entry, '');
+
+			return;
+		}
+
+		$confirmation_message = self::get_payment_confirmation_message($confirmation_form, $entry, $payment_result, true);
+		$form_id = absint(rgar($confirmation_form, 'id'));
+		$css_classes = preg_split('/\s+/', (string) rgar($confirmation_form, 'cssClass'));
+		$css_classes = array_filter(array_map('sanitize_html_class', $css_classes));
+		$default_anchor = 0;
+		$anchor = gf_apply_filters('gform_confirmation_anchor', $form_id, $default_anchor)
+			? sprintf('<a id="gf_%1$d" name="gf_%1$d" class="gform_anchor"></a>', $form_id)
+			: '';
+		$confirmation_message = sprintf(
+			'%1$s<div id="gform_confirmation_wrapper_%2$d" class="gform_confirmation_wrapper %3$s"><div id="gform_confirmation_message_%2$d" class="gform_confirmation_message_%2$d gform_confirmation_message">%4$s</div></div>',
+			$anchor,
+			$form_id,
+			esc_attr(implode(' ', $css_classes)),
+			$confirmation_message
+		);
+
+		GFFormDisplay::$submission[$form_id] = array(
+			'is_valid'             => true,
+			'is_confirmation'      => true,
+			'confirmation_message' => $confirmation_message,
+			'form'                 => $confirmation_form,
+			'lead'                 => $entry,
+		);
 	}
 
 
@@ -2616,8 +2827,6 @@ class GFPersian_Gateway_Zibal
 
 		$Message = !empty($Message) ? $Message : __('خطایی رخ داده است.', 'gravityformszibal');
 
-		$confirmation = __('متاسفانه نمیتوانیم به درگاه متصل شویم. علت : ', 'gravityformszibal') . $Message;
-
 		if ($valid_checker) {
 			return $Message;
 		}
@@ -2626,6 +2835,7 @@ class GFPersian_Gateway_Zibal
 		$entry['payment_status'] = 'Failed';
 		GFAPI::update_entry($entry);
 		gform_update_meta($entry_id, 'zibal_payment_state', 'failed');
+		gform_update_meta($entry_id, 'zibal_payment_result', 'failure');
 
 		RGFormsModel::add_note($entry_id, $user_id, $user_name, sprintf(__('خطا در اتصال به درگاه رخ داده است : %s', "gravityformszibal"), $Message));
 		self::add_zibal_response_note($entry_id, $user_id, $user_name, __('جزئیات کامل پاسخ زیبال هنگام اتصال به درگاه', 'gravityformszibal'), $Result, $Message);
@@ -2634,12 +2844,7 @@ class GFPersian_Gateway_Zibal
 			GFPersian_Payments::notification($form, $entry);
 		}
 
-		$default_anchor = 0;
-		$anchor         = gf_apply_filters('gform_confirmation_anchor', $form['id'], $default_anchor) ? "<a id='gf_{$form['id']}' name='gf_{$form['id']}' class='gform_anchor' ></a>" : '';
-		$nl2br          = !empty($form['confirmation']) && rgar($form['confirmation'], 'disableAutoformat') ? false : true;
-		$cssClass       = rgar($form, 'cssClass');
-
-		return $confirmation = empty($confirmation) ? "{$anchor} " : "{$anchor}<div id='gform_confirmation_wrapper_{$form['id']}' class='gform_confirmation_wrapper {$cssClass}'><div id='gform_confirmation_message_{$form['id']}' class='gform_confirmation_message_{$form['id']} gform_confirmation_message'>" . GFCommon::replace_variables($confirmation, $form, $entry, false, true, $nl2br) . '</div></div>';
+		return self::get_payment_confirmation_return($form, $entry, 'failed', $ajax);
 	}
 
 
@@ -2696,7 +2901,7 @@ class GFPersian_Gateway_Zibal
 
 			if (!empty($entry["payment_date"])) {
 				$existing_status = in_array(rgar($entry, 'payment_status'), array('Paid', 'Active'), true) ? 'completed' : 'failed';
-				self::show_payment_confirmation($form, $entry, $existing_status);
+				self::display_payment_confirmation($form, $entry, $existing_status);
 
 				return;
 			}
@@ -2959,7 +3164,7 @@ class GFPersian_Gateway_Zibal
 
 			if (apply_filters(self::$author . '_gf_zibal_verify', apply_filters(self::$author . '_gf_gateway_verify', ($payment_type != 'custom'), $form, $entry), $form, $entry)) {
 				GFPersian_Payments::notification($form, $entry);
-				self::show_payment_confirmation($form, $entry, $Status, $Message);
+				self::display_payment_confirmation($form, $entry, $Status, $Message);
 			}
 		}
 	}
