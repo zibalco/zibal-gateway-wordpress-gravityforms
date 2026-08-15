@@ -14,9 +14,11 @@ class GFPersian_Gateway_Zibal
 	public static $author = "Zibal";
 
 
-	private static $version = "1.2.3";
+	private static $version = "1.2.8";
 	private static $min_gravityforms_version = "1.9.10";
 	private static $config = null;
+	private static $payment_confirmation_content = '';
+	private static $payment_confirmation_form_id = 0;
 
 
 	public static function init()
@@ -753,6 +755,132 @@ class GFPersian_Gateway_Zibal
 			'form'                 => $confirmation_form,
 			'lead'                 => $entry,
 		);
+
+		self::$payment_confirmation_content = $confirmation_message;
+		self::$payment_confirmation_form_id = $form_id;
+		add_filter('the_content', array(__CLASS__, 'replace_payment_form_content'), PHP_INT_MAX);
+		self::send_direct_payment_confirmation_response($confirmation_message, $payment_result, $form, $entry);
+	}
+
+
+	private static function send_direct_payment_confirmation_response($confirmation_message, $payment_result, $form, $entry)
+	{
+		$send_directly = apply_filters(
+			'gform_zibal_direct_confirmation_response',
+			true,
+			$payment_result,
+			$form,
+			$entry
+		);
+		if (!$send_directly) {
+			return;
+		}
+
+		if (!headers_sent()) {
+			if (function_exists('status_header')) {
+				status_header(200);
+			}
+			if (function_exists('nocache_headers')) {
+				nocache_headers();
+			}
+		}
+
+		$title = $payment_result === 'success'
+			? __('نتیجه پرداخت موفق', 'gravityformszibal')
+			: __('نتیجه پرداخت ناموفق', 'gravityformszibal');
+		$result_class = $payment_result === 'success' ? 'success' : 'failure';
+		$content = sprintf(
+			'<main id="zibal-payment-confirmation" class="zibal-payment-confirmation-page zibal-payment-confirmation-page--%1$s" role="status" aria-live="polite" tabindex="-1"><div class="zibal-payment-confirmation-card">%2$s</div></main>',
+			esc_attr($result_class),
+			wp_kses_post((string) $confirmation_message)
+		);
+		$presentation = '<style id="zibal-payment-confirmation-styles">
+			.zibal-payment-confirmation-page{box-sizing:border-box;width:100%;min-height:45vh;padding:clamp(72px,8vw,128px) 20px 80px;clear:both;position:relative;z-index:1;direction:rtl}
+			.zibal-payment-confirmation-card{box-sizing:border-box;width:min(100%,1200px);margin:0 auto;padding:clamp(20px,3vw,40px);background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 10px 30px rgba(15,23,42,.08);overflow-wrap:anywhere}
+			.zibal-payment-confirmation-page--success .zibal-payment-confirmation-card{border-top:4px solid #16803c}
+			.zibal-payment-confirmation-page--failure .zibal-payment-confirmation-card{border-top:4px solid #c62828}
+			.zibal-payment-confirmation-card .gform_confirmation_wrapper{margin:0}
+			@media(max-width:600px){.zibal-payment-confirmation-page{padding:72px 12px 48px}.zibal-payment-confirmation-card{padding:20px 14px;border-radius:10px}}
+		</style>';
+		$presentation .= '<script id="zibal-payment-confirmation-position">(function(){function reveal(){var main=document.getElementById("zibal-payment-confirmation");if(!main){return;}var bottom=0;var nodes=document.querySelectorAll("header,.site-header,#masthead,.elementor-location-header,.elementor-sticky--active");for(var i=0;i<nodes.length;i++){var style=window.getComputedStyle(nodes[i]);var rect=nodes[i].getBoundingClientRect();if((style.position==="fixed"||style.position==="sticky")&&rect.top<=10&&rect.bottom>bottom){bottom=rect.bottom;}}var gap=24;var target=window.pageYOffset+main.getBoundingClientRect().top-bottom-gap;window.scrollTo(0,Math.max(0,target));if(main.focus){try{main.focus({preventScroll:true});}catch(e){main.focus();}}}if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",reveal);}else{window.setTimeout(reveal,0);}})();</script>';
+		$terminate = apply_filters(
+			'gform_zibal_terminate_direct_confirmation_response',
+			true,
+			$payment_result,
+			$form,
+			$entry
+		);
+
+		if (function_exists('get_header') && function_exists('get_footer')) {
+			get_header();
+			echo $presentation . $content;
+			get_footer();
+		} else {
+			wp_die($presentation . $content, esc_html($title), array('response' => 200, 'back_link' => false));
+		}
+
+		if ($terminate) {
+			exit;
+		}
+	}
+
+
+	public static function replace_payment_form_content($content)
+	{
+		if (self::$payment_confirmation_content === '' || self::$payment_confirmation_form_id < 1) {
+			return $content;
+		}
+
+		if (function_exists('is_main_query') && !is_main_query()) {
+			return $content;
+		}
+
+		if (function_exists('in_the_loop') && !in_the_loop()) {
+			return $content;
+		}
+
+		$form_id = self::$payment_confirmation_form_id;
+		$form_markers = array(
+			'gform_wrapper_' . $form_id,
+			'gform_' . $form_id,
+			'gravityform id="' . $form_id . '"',
+			"gravityform id='" . $form_id . "'",
+		);
+		$contains_form = false;
+		foreach ($form_markers as $marker) {
+			if (strpos((string) $content, $marker) !== false) {
+				$contains_form = true;
+				break;
+			}
+		}
+
+		if (!$contains_form) {
+			return $content;
+		}
+
+		$confirmation_content = self::$payment_confirmation_content;
+		self::$payment_confirmation_content = '';
+		self::$payment_confirmation_form_id = 0;
+
+		return $confirmation_content;
+	}
+
+
+	private static function get_entry_for_payment($entry_id)
+	{
+		$entry_id = absint($entry_id);
+		if ($entry_id < 1) {
+			return new WP_Error('invalid_entry_id', __('شناسه ورودی پرداخت معتبر نیست.', 'gravityformszibal'));
+		}
+
+		if (class_exists('GFAPI') && is_callable(array('GFAPI', 'get_entry'))) {
+			$entry = GFAPI::get_entry($entry_id);
+			if (!is_wp_error($entry) && is_array($entry)) {
+				return $entry;
+			}
+		}
+
+		return GFPersian_Payments::get_entry($entry_id);
 	}
 
 
@@ -1073,7 +1201,7 @@ class GFPersian_Gateway_Zibal
 		$request_uri = '/' . ltrim((string) $request_uri, '/');
 		$pageURL = esc_url_raw(home_url($request_uri, GFCommon::is_ssl() ? 'https' : 'http'));
 
-		$arr_params = array('id', 'entry', 'no', 'trackId', 'Status', 'success', 'zibal_token');
+		$arr_params = array('id', 'entry', 'no', 'trackId', 'Status', 'success', 'zibal_token', 'zibal_callback');
 		$pageURL    = esc_url_raw(remove_query_arg($arr_params, $pageURL));
 		$payment_token = gform_get_meta($entry_id, 'zibal_payment_token');
 		if (empty($payment_token)) {
@@ -1082,9 +1210,10 @@ class GFPersian_Gateway_Zibal
 		}
 
 		$pageURL = add_query_arg(array(
-			'id'          => $form_id,
-			'entry'       => $entry_id,
-			'zibal_token' => $payment_token,
+			'id'             => $form_id,
+			'entry'          => $entry_id,
+			'zibal_token'    => $payment_token,
+			'zibal_callback' => '1',
 		), $pageURL);
 
 		return apply_filters(self::$author . '_zibal_return_url', apply_filters(self::$author . '_gateway_return_url', $pageURL, $form_id, $entry_id, __CLASS__), $form_id, $entry_id, __CLASS__);
@@ -1711,7 +1840,7 @@ class GFPersian_Gateway_Zibal
 		}
 
 		if (!empty($saved_meta)) {
-			$entry = GFPersian_Payments::get_entry($entry_id);
+			$entry = self::get_entry_for_payment($entry_id);
 			if (!is_wp_error($entry) && is_array($entry) && !empty($entry['post_id'])) {
 				foreach ($saved_meta as $meta_key => $value) {
 					update_post_meta($entry['post_id'], $meta_key, $value);
@@ -2831,7 +2960,7 @@ class GFPersian_Gateway_Zibal
 			return $Message;
 		}
 
-		$entry                   = GFPersian_Payments::get_entry($entry_id);
+		$entry                   = self::get_entry_for_payment($entry_id);
 		$entry['payment_status'] = 'Failed';
 		GFAPI::update_entry($entry);
 		gform_update_meta($entry_id, 'zibal_payment_state', 'failed');
@@ -2864,10 +2993,17 @@ class GFPersian_Gateway_Zibal
 			return;
 		}
 
+		if (!defined('DONOTCACHEPAGE')) {
+			define('DONOTCACHEPAGE', true);
+		}
+		if (function_exists('nocache_headers') && !headers_sent()) {
+			nocache_headers();
+		}
+
 		$form_id  = absint(rgget('id'));
 		$entry_id = absint(rgget('entry'));
 
-		$entry = GFPersian_Payments::get_entry($entry_id);
+		$entry = self::get_entry_for_payment($entry_id);
 
 		if (is_wp_error($entry)) {
 			return;
@@ -3071,7 +3207,7 @@ class GFPersian_Gateway_Zibal
 					if (empty($entry["post_id"]) && $has_post) {
 						$form['postStatus'] = $new_status;
 						RGFormsModel::create_post($form, $entry);
-						$entry = GFPersian_Payments::get_entry($entry_id);
+						$entry = self::get_entry_for_payment($entry_id);
 					}
 
 					if (!empty($entry["post_id"]) && $has_post) {
