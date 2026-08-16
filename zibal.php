@@ -14,11 +14,12 @@ class GFPersian_Gateway_Zibal
 	public static $author = "Zibal";
 
 
-	private static $version = "1.2.8";
+	private static $version = "1.3.0";
 	private static $min_gravityforms_version = "1.9.10";
-	private static $config = null;
+	private static $config = array();
 	private static $payment_confirmation_content = '';
 	private static $payment_confirmation_form_id = 0;
+	private static $verification_lock_tokens = array();
 
 
 	public static function init()
@@ -57,7 +58,7 @@ class GFPersian_Gateway_Zibal
 			}
 
 			if (rgget("page") == "gf_settings") {
-				RGForms::add_settings_page(
+				GFForms::add_settings_page(
 					array(
 						'name'      => 'gf_zibal',
 						'tab_label' => __('درگاه زیبال', 'gravityformszibal'),
@@ -73,6 +74,7 @@ class GFPersian_Gateway_Zibal
 			}
 
 			add_action('wp_ajax_gf_zibal_update_feed_active', array(__CLASS__, 'update_feed_active'));
+			add_action('admin_post_gf_zibal_retry_verification', array(__CLASS__, 'retry_verification'));
 		}
 		if (get_option("gf_zibal_configured")) {
 			add_filter("gform_disable_post_creation", array(__CLASS__, "delay_posts"), 10, 3);
@@ -97,16 +99,16 @@ class GFPersian_Gateway_Zibal
 	public static function admin_notice_persian_gf()
 	{
 		$class   = 'notice notice-error';
-		$message = sprintf(__("برای استفاده از نسخه جدید درگاه های پرداخت گرویتی فرم نصب بسته فارسی ساز نسخه 2.3.1 به بالا الزامی است. برای نصب فارسی ساز %sکلیک کنید%s.", "gravityformszibal"), '<a href="' . admin_url("plugin-install.php?tab=plugin-information&plugin=persian-gravity-forms&TB_iframe=true&width=772&height=884") . '">', '</a>');
-		printf('<div class="%1$s"><p>%2$s</p></div>', $class, $message);
+		$message = sprintf(__("برای استفاده از نسخه جدید درگاه های پرداخت گرویتی فرم نصب بسته فارسی ساز نسخه 2.3.1 به بالا الزامی است. برای نصب فارسی ساز %sکلیک کنید%s.", "gravityformszibal"), '<a href="' . esc_url(admin_url("plugin-install.php?tab=plugin-information&plugin=persian-gravity-forms&TB_iframe=true&width=772&height=884")) . '">', '</a>');
+		printf('<div class="%1$s"><p>%2$s</p></div>', esc_attr($class), wp_kses_post($message));
 	}
 
 
 	public static function admin_notice_gf_support()
 	{
 		$class   = 'notice notice-error';
-		$message = sprintf(__("درگاه زیبال نیاز به گرویتی فرم نسخه %s به بالا دارد. برای بروز رسانی هسته گرویتی فرم به %sسایت گرویتی فرم فارسی%s مراجعه نمایید .", "gravityformszibal"), self::$min_gravityforms_version, "<a href='http://gravityforms.ir/11378' target='_blank'>", "</a>");
-		printf('<div class="%1$s"><p>%2$s</p></div>', $class, $message);
+		$message = sprintf(__("درگاه زیبال نیاز به گرویتی فرم نسخه %s به بالا دارد. برای بروز رسانی هسته گرویتی فرم به %sسایت گرویتی فرم فارسی%s مراجعه نمایید .", "gravityformszibal"), esc_html(self::$min_gravityforms_version), "<a href='https://gravityforms.ir/11378' target='_blank' rel='noopener noreferrer'>", "</a>");
+		printf('<div class="%1$s"><p>%2$s</p></div>', esc_attr($class), wp_kses_post($message));
 	}
 
 
@@ -133,7 +135,8 @@ class GFPersian_Gateway_Zibal
 		global $wp_roles;
 		$editable_roles = get_editable_roles();
 		foreach ((array) $editable_roles as $role => $details) {
-			if ($role == 'administrator' || in_array('gravityforms_edit_forms', $details['capabilities'])) {
+			$capabilities = isset($details['capabilities']) && is_array($details['capabilities']) ? $details['capabilities'] : array();
+			if ($role == 'administrator' || !empty($capabilities['gravityforms_edit_forms'])) {
 				$wp_roles->add_cap($role, 'gravityforms_zibal');
 				$wp_roles->add_cap($role, 'gravityforms_zibal_uninstall');
 			}
@@ -252,9 +255,9 @@ class GFPersian_Gateway_Zibal
 
 	private static function is_zibal_page()
 	{
-		$current_page    = in_array(trim(strtolower(rgget("page"))), array('gf_zibal', 'zibal'));
-		$current_view    = in_array(trim(strtolower(rgget("view"))), array('gf_zibal', 'zibal'));
-		$current_subview = in_array(trim(strtolower(rgget("subview"))), array('gf_zibal', 'zibal'));
+		$current_page    = in_array(trim(strtolower((string) rgget("page"))), array('gf_zibal', 'zibal'));
+		$current_view    = in_array(trim(strtolower((string) rgget("view"))), array('gf_zibal', 'zibal'));
+		$current_subview = in_array(trim(strtolower((string) rgget("subview"))), array('gf_zibal', 'zibal'));
 
 		return $current_page || $current_view || $current_subview;
 	}
@@ -320,7 +323,7 @@ class GFPersian_Gateway_Zibal
 				continue;
 			}
 
-			$field = RGFormsModel::get_field($form, $field_id);
+			$field = GFFormsModel::get_field($form, $field_id);
 			if (empty($field)) {
 				continue;
 			}
@@ -328,9 +331,9 @@ class GFPersian_Gateway_Zibal
 			$value    = !empty($condition_values['' . $i . '']) ? $condition_values['' . $i . ''] : '';
 			$operator = !empty($condition_operators['' . $i . '']) ? $condition_operators['' . $i . ''] : 'is';
 
-			$is_visible     = !RGFormsModel::is_field_hidden($form, $field, array());
-			$field_value    = RGFormsModel::get_field_value($field, array());
-			$is_value_match = RGFormsModel::is_value_match($field_value, $value, $operator);
+			$is_visible     = !GFFormsModel::is_field_hidden($form, $field, array());
+			$field_value    = GFFormsModel::get_field_value($field, array());
+			$is_value_match = GFFormsModel::is_value_match($field_value, $value, $operator);
 			$check          = $is_value_match && $is_visible;
 
 			if ($type == 'any' && $check) {
@@ -402,7 +405,11 @@ class GFPersian_Gateway_Zibal
 	{
 
 		if (headers_sent() || $ajax) {
-			$confirmation = "<script type=\"text/javascript\">" . apply_filters('gform_cdata_open', '') . " function gformRedirect(){document.location.href='$url';}";
+			$encoded_url = wp_json_encode((string) $url, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+			if ($encoded_url === false) {
+				$encoded_url = '""';
+			}
+			$confirmation = "<script type=\"text/javascript\">" . apply_filters('gform_cdata_open', '') . " function gformRedirect(){document.location.href=" . $encoded_url . ";}";
 			if (!$ajax) {
 				$confirmation .= 'gformRedirect();';
 			}
@@ -545,7 +552,7 @@ class GFPersian_Gateway_Zibal
 		}
 
 		if (class_exists('RGFormsModel') && is_callable(array('RGFormsModel', 'evaluate_conditional_logic'))) {
-			return RGFormsModel::evaluate_conditional_logic($logic, $form, $entry);
+			return GFFormsModel::evaluate_conditional_logic($logic, $form, $entry);
 		}
 
 		$matches = array();
@@ -560,7 +567,7 @@ class GFPersian_Gateway_Zibal
 			} elseif (class_exists('GFFormsModel') && method_exists('GFFormsModel', 'is_value_match')) {
 				$matches[] = GFFormsModel::is_value_match($field_value, $target_value, $operation);
 			} else {
-				$matches[] = RGFormsModel::is_value_match($field_value, $target_value, $operation);
+				$matches[] = GFFormsModel::is_value_match($field_value, $target_value, $operation);
 			}
 		}
 
@@ -718,7 +725,8 @@ class GFPersian_Gateway_Zibal
 
 	private static function display_payment_confirmation($form, $entry, $status, $message = '')
 	{
-		$payment_result = self::normalize_payment_status_for_condition($status) === 'completed' ? 'success' : 'failure';
+		$normalized_status = self::normalize_payment_status_for_condition($status);
+		$payment_result = $normalized_status === 'completed' ? 'success' : 'failure';
 		if (!empty($entry['id'])) {
 			gform_update_meta($entry['id'], 'zibal_payment_result', $payment_result);
 		}
@@ -733,6 +741,9 @@ class GFPersian_Gateway_Zibal
 		}
 
 		$confirmation_message = self::get_payment_confirmation_message($confirmation_form, $entry, $payment_result, true);
+		if ($normalized_status === 'processing' && $message !== '') {
+			$confirmation_message = '<p>' . esc_html($message) . '</p>';
+		}
 		$form_id = absint(rgar($confirmation_form, 'id'));
 		$css_classes = preg_split('/\s+/', (string) rgar($confirmation_form, 'cssClass'));
 		$css_classes = array_filter(array_map('sanitize_html_class', $css_classes));
@@ -783,6 +794,8 @@ class GFPersian_Gateway_Zibal
 			if (function_exists('nocache_headers')) {
 				nocache_headers();
 			}
+			header('Referrer-Policy: no-referrer');
+			header('X-Robots-Tag: noindex, nofollow', true);
 		}
 
 		$title = $payment_result === 'success'
@@ -802,7 +815,7 @@ class GFPersian_Gateway_Zibal
 			.zibal-payment-confirmation-card .gform_confirmation_wrapper{margin:0}
 			@media(max-width:600px){.zibal-payment-confirmation-page{padding:72px 12px 48px}.zibal-payment-confirmation-card{padding:20px 14px;border-radius:10px}}
 		</style>';
-		$presentation .= '<script id="zibal-payment-confirmation-position">(function(){function reveal(){var main=document.getElementById("zibal-payment-confirmation");if(!main){return;}var bottom=0;var nodes=document.querySelectorAll("header,.site-header,#masthead,.elementor-location-header,.elementor-sticky--active");for(var i=0;i<nodes.length;i++){var style=window.getComputedStyle(nodes[i]);var rect=nodes[i].getBoundingClientRect();if((style.position==="fixed"||style.position==="sticky")&&rect.top<=10&&rect.bottom>bottom){bottom=rect.bottom;}}var gap=24;var target=window.pageYOffset+main.getBoundingClientRect().top-bottom-gap;window.scrollTo(0,Math.max(0,target));if(main.focus){try{main.focus({preventScroll:true});}catch(e){main.focus();}}}if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",reveal);}else{window.setTimeout(reveal,0);}})();</script>';
+		$presentation .= '<script id="zibal-payment-confirmation-position">(function(){try{if(window.history&&window.history.replaceState&&window.URL){var clean=new URL(window.location.href);var keys=["zibal_token","zibal_callback","success","status","Status","trackId","orderId","orderid","no","id","entry"];for(var k=0;k<keys.length;k++){clean.searchParams.delete(keys[k]);}window.history.replaceState({},document.title,clean.pathname+(clean.search?clean.search:"")+(clean.hash?clean.hash:""));}}catch(ignore){}function reveal(){var main=document.getElementById("zibal-payment-confirmation");if(!main){return;}var bottom=0;var nodes=document.querySelectorAll("header,.site-header,#masthead,.elementor-location-header,.elementor-sticky--active");for(var i=0;i<nodes.length;i++){var style=window.getComputedStyle(nodes[i]);var rect=nodes[i].getBoundingClientRect();if((style.position==="fixed"||style.position==="sticky")&&rect.top<=10&&rect.bottom>bottom){bottom=rect.bottom;}}var gap=24;var target=window.pageYOffset+main.getBoundingClientRect().top-bottom-gap;window.scrollTo(0,Math.max(0,target));if(main.focus){try{main.focus({preventScroll:true});}catch(e){main.focus();}}}if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",reveal);}else{window.setTimeout(reveal,0);}})();</script>';
 		$terminate = apply_filters(
 			'gform_zibal_terminate_direct_confirmation_response',
 			true,
@@ -886,17 +899,38 @@ class GFPersian_Gateway_Zibal
 
 	private static function acquire_verification_lock($entry_id)
 	{
-		$lock_name = 'gf_zibal_verify_lock_' . absint($entry_id);
+		$entry_id = absint($entry_id);
+		$lock_name = 'gf_zibal_verify_lock_' . $entry_id;
 		$now = time();
-		if (add_option($lock_name, $now, '', 'no')) {
+		$lock_token = uniqid((string) mt_rand(), true);
+		$lock_value = $now . ':' . $lock_token;
+		if (add_option($lock_name, $lock_value, '', 'no')) {
+			self::$verification_lock_tokens[$entry_id] = $lock_value;
+
 			return true;
 		}
 
-		$created_at = absint(get_option($lock_name));
+		$current_value = (string) get_option($lock_name);
+		$current_parts = explode(':', $current_value, 2);
+		$created_at = absint(isset($current_parts[0]) ? $current_parts[0] : 0);
 		if ($created_at > 0 && $created_at < ($now - 120)) {
-			delete_option($lock_name);
+			global $wpdb;
+			if (is_object($wpdb) && isset($wpdb->options) && is_callable(array($wpdb, 'query'))) {
+				$updated = $wpdb->query($wpdb->prepare(
+					"UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s",
+					$lock_value,
+					$lock_name,
+					$current_value
+				));
+				if ((int) $updated === 1) {
+					if (function_exists('wp_cache_delete')) {
+						wp_cache_delete($lock_name, 'options');
+					}
+					self::$verification_lock_tokens[$entry_id] = $lock_value;
 
-			return add_option($lock_name, $now, '', 'no');
+					return true;
+				}
+			}
 		}
 
 		return false;
@@ -905,18 +939,73 @@ class GFPersian_Gateway_Zibal
 
 	private static function release_verification_lock($entry_id)
 	{
-		delete_option('gf_zibal_verify_lock_' . absint($entry_id));
+		$entry_id = absint($entry_id);
+		if (!isset(self::$verification_lock_tokens[$entry_id])) {
+			return;
+		}
+
+		$lock_name = 'gf_zibal_verify_lock_' . $entry_id;
+		$lock_value = self::$verification_lock_tokens[$entry_id];
+		global $wpdb;
+		if (is_object($wpdb) && isset($wpdb->options) && is_callable(array($wpdb, 'query'))) {
+			$wpdb->query($wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s",
+				$lock_name,
+				$lock_value
+			));
+			if (function_exists('wp_cache_delete')) {
+				wp_cache_delete($lock_name, 'options');
+			}
+		} else if (self::secure_equals((string) get_option($lock_name), $lock_value)) {
+			delete_option($lock_name);
+		}
+
+		unset(self::$verification_lock_tokens[$entry_id]);
+	}
+
+
+	private static function secure_equals($known_value, $provided_value)
+	{
+		$known_value = (string) $known_value;
+		$provided_value = (string) $provided_value;
+
+		if (function_exists('hash_equals')) {
+			return hash_equals($known_value, $provided_value);
+		}
+
+		if (strlen($known_value) !== strlen($provided_value)) {
+			return false;
+		}
+
+		$result = 0;
+		$length = strlen($known_value);
+		for ($index = 0; $index < $length; $index++) {
+			$result |= ord($known_value[$index]) ^ ord($provided_value[$index]);
+		}
+
+		return $result === 0;
+	}
+
+
+	private static function is_retryable_zibal_result($result_code)
+	{
+		return in_array(
+			(string) $result_code,
+			array('wp_error', 'http_error', 'invalid_json', 'internal_error', 'exception'),
+			true
+		);
 	}
 
 
 	public static function get_active_config($form)
 	{
+		$form_id = absint(rgar($form, 'id'));
 
-		if (!empty(self::$config)) {
-			return self::$config;
+		if (array_key_exists($form_id, self::$config)) {
+			return self::$config[$form_id];
 		}
 
-		$configs = GFPersian_DB_Zibal::get_feed_by_form($form["id"], true);
+		$configs = GFPersian_DB_Zibal::get_feed_by_form($form_id, true);
 
 		$configs = apply_filters(self::$author . '_gf_zibal_get_active_configs', apply_filters(self::$author . '_gf_gateway_get_active_configs', $configs, $form), $form);
 
@@ -927,14 +1016,14 @@ class GFPersian_Gateway_Zibal
 			foreach ($configs as $config) {
 				if (self::has_zibal_condition($form, $config)) {
 					$return = $config;
+					break;
 				}
-				break;
 			}
 		}
 
-		self::$config = apply_filters(self::$author . '_gf_zibal_get_active_config', apply_filters(self::$author . '_gf_gateway_get_active_config', $return, $form), $form);
+		self::$config[$form_id] = apply_filters(self::$author . '_gf_zibal_get_active_config', apply_filters(self::$author . '_gf_gateway_get_active_config', $return, $form), $form);
 
-		return self::$config;
+		return self::$config[$form_id];
 	}
 
 
@@ -953,9 +1042,12 @@ class GFPersian_Gateway_Zibal
 
 	private static function list_page($arg)
 	{
+		if (!self::has_access()) {
+			wp_die(esc_html__('شما مجوز کافی برای مدیریت فیدهای زیبال را ندارید.', 'gravityformszibal'));
+		}
 
 		if (!self::is_gravityforms_supported()) {
-			die(sprintf(__("درگاه زیبال نیاز به گرویتی فرم نسخه %s دارد. برای بروز رسانی هسته گرویتی فرم به %sسایت گرویتی فرم فارسی%s مراجعه نمایید .", "gravityformszibal"), self::$min_gravityforms_version, "<a href='http://gravityforms.ir/11378' target='_blank'>", "</a>"));
+			wp_die(wp_kses_post(sprintf(__("درگاه زیبال نیاز به گرویتی فرم نسخه %s دارد. برای بروز رسانی هسته گرویتی فرم به %sسایت گرویتی فرم فارسی%s مراجعه نمایید .", "gravityformszibal"), esc_html(self::$min_gravityforms_version), "<a href='https://gravityforms.ir/11378' target='_blank' rel='noopener noreferrer'>", "</a>")));
 		}
 
 		if (rgpost('action') == "delete") {
@@ -964,13 +1056,13 @@ class GFPersian_Gateway_Zibal
 			GFPersian_DB_Zibal::delete_feed($id);
 		?>
 			<div class="updated fade" style="padding:6px"><?php _e("فید حذف شد", "gravityformszibal") ?></div><?php
-																											} else if (!empty($_POST["bulk_action"])) {
+		} else if (rgpost("bulk_action") === 'delete') {
 
 																												check_admin_referer("list_action", "gf_zibal_list");
 																												$selected_feeds = rgpost("feed");
 																												if (is_array($selected_feeds)) {
 																													foreach ($selected_feeds as $feed_id) {
-																														GFPersian_DB_Zibal::delete_feed($feed_id);
+																														GFPersian_DB_Zibal::delete_feed(absint($feed_id));
 																													}
 																												}
 
@@ -1188,7 +1280,8 @@ class GFPersian_Gateway_Zibal
 
 		$feed_form_id   = absint($feed["form_id"]);
 		$feed_meta      = is_array($feed["meta"]) ? $feed["meta"] : array();
-		$post_is_active = !empty($_POST["is_active"]) ? 1 : 0;
+		$post_is_active_value = isset($_POST["is_active"]) ? sanitize_key(wp_unslash($_POST["is_active"])) : '';
+		$post_is_active = in_array($post_is_active_value, array('1', 'true'), true) ? 1 : 0;
 		GFPersian_DB_Zibal::update_feed($id, $feed_form_id, $post_is_active, $feed_meta);
 
 		wp_die();
@@ -1197,11 +1290,32 @@ class GFPersian_Gateway_Zibal
 
 	private static function Return_URL($form_id, $entry_id)
 	{
+		$scheme = GFCommon::is_ssl() ? 'https' : 'http';
 		$request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '/';
 		$request_uri = '/' . ltrim((string) $request_uri, '/');
-		$pageURL = esc_url_raw(home_url($request_uri, GFCommon::is_ssl() ? 'https' : 'http'));
+		$request_parts = parse_url($request_uri);
+		$request_path = is_array($request_parts) && isset($request_parts['path']) ? (string) $request_parts['path'] : '/';
+		$request_query = is_array($request_parts) && isset($request_parts['query']) ? (string) $request_parts['query'] : '';
 
-		$arr_params = array('id', 'entry', 'no', 'trackId', 'Status', 'success', 'zibal_token', 'zibal_callback');
+		/*
+		 * REQUEST_URI includes the WordPress subdirectory, while home_url() adds it
+		 * itself. Remove that prefix before passing the path to home_url() so an
+		 * installation such as /test1 does not produce /test1/test1/... callbacks.
+		 */
+		$home_path = parse_url(home_url('/', $scheme), PHP_URL_PATH);
+		$home_path = is_string($home_path) ? rtrim($home_path, '/') : '';
+		if ($home_path !== '' && ($request_path === $home_path || strpos($request_path, $home_path . '/') === 0)) {
+			$request_path = (string) substr($request_path, strlen($home_path));
+		}
+
+		$request_path = '/' . ltrim($request_path, '/');
+		$pageURL = home_url($request_path, $scheme);
+		if ($request_query !== '') {
+			$pageURL .= '?' . $request_query;
+		}
+		$pageURL = esc_url_raw($pageURL);
+
+		$arr_params = array('id', 'entry', 'no', 'trackId', 'Status', 'status', 'success', 'orderId', 'orderid', 'zibal_token', 'zibal_callback');
 		$pageURL    = esc_url_raw(remove_query_arg($arr_params, $pageURL));
 		$payment_token = gform_get_meta($entry_id, 'zibal_payment_token');
 		if (empty($payment_token)) {
@@ -1299,6 +1413,9 @@ class GFPersian_Gateway_Zibal
 
 	public static function payment_entry_detail($form_id, $entry)
 	{
+		if (!self::has_access()) {
+			return;
+		}
 
 		$payment_gateway = rgar($entry, "payment_method");
 
@@ -1320,7 +1437,7 @@ class GFPersian_Gateway_Zibal
 			$payment_amount   = rgar($entry, "payment_amount");
 
 			if (empty($payment_amount)) {
-				$form           = RGFormsModel::get_form_meta($form_id);
+				$form           = GFFormsModel::get_form_meta($form_id);
 				$payment_amount = self::get_order_total($form, $entry);
 			}
 
@@ -1331,13 +1448,17 @@ class GFPersian_Gateway_Zibal
 
 			$payment_status_persian = self::get_payment_status_label($payment_status);
 
-			if (!strtolower(rgpost("save")) || RGForms::post("screen_mode") != "edit") {
+			if (!strtolower((string) rgpost("save")) || GFForms::post("screen_mode") != "edit") {
 				echo esc_html__('وضعیت پرداخت : ', 'gravityformszibal') . esc_html($payment_status_persian) . '<br/><br/>';
 				echo esc_html__('تاریخ پرداخت : ', 'gravityformszibal') . '<span style="">' . esc_html($payment_date) . '</span><br/><br/>';
 				echo esc_html__('مبلغ پرداختی : ', 'gravityformszibal') . esc_html(GFCommon::to_money($payment_amount, rgar($entry, "currency"))) . '<br/><br/>';
 				echo esc_html__('کد رهگیری : ', 'gravityformszibal') . esc_html($transaction_id) . '<br/><br/>';
 				self::print_zibal_transaction_meta($entry);
 				esc_html_e('درگاه پرداخت : زیبال', 'gravityformszibal');
+				$retry_url = self::get_retry_verification_url($entry);
+				if ($retry_url !== '' && !in_array($payment_status, array('Paid', 'Active'), true)) {
+					echo '<br/><br/><a class="button button-secondary" href="' . esc_url($retry_url) . '">' . esc_html__('بررسی مجدد پرداخت در زیبال', 'gravityformszibal') . '</a>';
+				}
 			} else {
 				$payment_string = '';
 				$payment_string .= '<select id="payment_status" name="payment_status">';
@@ -1409,8 +1530,101 @@ class GFPersian_Gateway_Zibal
 	}
 
 
+	private static function get_retry_verification_url($entry)
+	{
+		$entry_id = absint(rgar($entry, 'id'));
+		$form_id = absint(rgar($entry, 'form_id'));
+		if ($entry_id < 1 || $form_id < 1 || rgar($entry, 'payment_method') !== 'zibal') {
+			return '';
+		}
+
+		$track_id = substr(sanitize_text_field((string) gform_get_meta($entry_id, 'zibal_track_id')), 0, 128);
+		$payment_token = substr(sanitize_text_field((string) gform_get_meta($entry_id, 'zibal_payment_token')), 0, 128);
+		$callback_url = esc_url_raw((string) gform_get_meta($entry_id, 'zibal_callback_url'));
+		if ($track_id === '' || $payment_token === '' || $callback_url === '') {
+			return '';
+		}
+
+		$callback_url = wp_validate_redirect($callback_url, '');
+		if ($callback_url === '' || !self::is_same_site_url($callback_url)) {
+			return '';
+		}
+
+		$admin_url = add_query_arg(array(
+			'action'   => 'gf_zibal_retry_verification',
+			'entry_id' => $entry_id,
+		), admin_url('admin-post.php'));
+
+		return wp_nonce_url($admin_url, 'gf_zibal_retry_verification_' . $entry_id);
+	}
+
+
+	private static function is_same_site_url($url)
+	{
+		$url_parts = wp_parse_url((string) $url);
+		$home_parts = wp_parse_url(home_url('/'));
+		if (!is_array($url_parts) || !is_array($home_parts) || empty($url_parts['host']) || empty($home_parts['host'])) {
+			return false;
+		}
+
+		$scheme = isset($url_parts['scheme']) ? strtolower((string) $url_parts['scheme']) : '';
+		if (!in_array($scheme, array('http', 'https'), true)) {
+			return false;
+		}
+
+		$url_port = isset($url_parts['port']) ? absint($url_parts['port']) : ($scheme === 'https' ? 443 : 80);
+		$home_scheme = isset($home_parts['scheme']) ? strtolower((string) $home_parts['scheme']) : 'http';
+		$home_port = isset($home_parts['port']) ? absint($home_parts['port']) : ($home_scheme === 'https' ? 443 : 80);
+
+		return self::secure_equals(strtolower((string) $home_parts['host']), strtolower((string) $url_parts['host'])) && $url_port === $home_port;
+	}
+
+
+	public static function retry_verification()
+	{
+		if (!self::has_access()) {
+			wp_die(esc_html__('شما مجوز کافی برای بررسی مجدد پرداخت را ندارید.', 'gravityformszibal'));
+		}
+
+		$entry_id = isset($_GET['entry_id']) ? absint(wp_unslash($_GET['entry_id'])) : 0;
+		if ($entry_id < 1) {
+			wp_die(esc_html__('شناسه ورودی پرداخت معتبر نیست.', 'gravityformszibal'));
+		}
+		check_admin_referer('gf_zibal_retry_verification_' . $entry_id);
+
+		$entry = self::get_entry_for_payment($entry_id);
+		$retry_url = !is_wp_error($entry) && is_array($entry) ? self::get_retry_verification_url($entry) : '';
+		if ($retry_url === '') {
+			wp_die(esc_html__('اطلاعات لازم برای بررسی مجدد این پرداخت کامل نیست.', 'gravityformszibal'));
+		}
+
+		/* Rebuild from protected entry metadata; never redirect to a submitted URL. */
+		$track_id = substr(sanitize_text_field((string) gform_get_meta($entry_id, 'zibal_track_id')), 0, 128);
+		$payment_token = substr(sanitize_text_field((string) gform_get_meta($entry_id, 'zibal_payment_token')), 0, 128);
+		$base_callback = wp_validate_redirect(esc_url_raw((string) gform_get_meta($entry_id, 'zibal_callback_url')), '');
+		if ($track_id === '' || $payment_token === '' || $base_callback === '' || !self::is_same_site_url($base_callback)) {
+			wp_die(esc_html__('اطلاعات لازم برای بررسی مجدد این پرداخت کامل نیست.', 'gravityformszibal'));
+		}
+		$base_callback = remove_query_arg(array('id', 'entry', 'no', 'trackId', 'Status', 'status', 'success', 'orderId', 'orderid', 'zibal_token', 'zibal_callback'), $base_callback);
+		$callback = add_query_arg(array(
+			'id'             => absint(rgar($entry, 'form_id')),
+			'entry'          => $entry_id,
+			'zibal_token'    => $payment_token,
+			'zibal_callback' => '1',
+			'success'        => '1',
+			'trackId'        => $track_id,
+		), $base_callback);
+
+		wp_safe_redirect($callback);
+		exit;
+	}
+
+
 	public static function update_payment_entry($form, $entry_id)
 	{
+		if (!self::has_access()) {
+			return;
+		}
 
 		check_admin_referer('gforms_save_entry', 'gforms_save_entry');
 
@@ -1432,10 +1646,21 @@ class GFPersian_Gateway_Zibal
 		if (empty($payment_status)) {
 			$payment_status = rgar($entry, "payment_status");
 		}
+		$allowed_payment_statuses = array('Paid', 'Active', 'Cancelled', 'Failed', 'Processing');
+		if (!in_array($payment_status, $allowed_payment_statuses, true)) {
+			$payment_status = 'Processing';
+		}
 
-		$payment_amount      = rgpost("payment_amount");
-		$payment_transaction = sanitize_text_field(rgpost("zibal_transaction_id"));
-		$payment_date        = self::parse_admin_payment_date(rgpost("payment_date"), rgar($entry, "payment_date") ?: rgar($entry, "date_created"));
+		$payment_amount = rgpost("payment_amount");
+		$payment_amount = is_numeric($payment_amount) && (float) $payment_amount >= 0 ? (float) $payment_amount : 0;
+		$payment_transaction = sanitize_text_field((string) rgpost("zibal_transaction_id"));
+		$is_paid_status = in_array($payment_status, array('Paid', 'Active'), true);
+		$payment_date = $is_paid_status
+			? self::parse_admin_payment_date(rgpost("payment_date"), rgar($entry, "payment_date") ?: rgar($entry, "date_created"))
+			: '';
+		if (!$is_paid_status) {
+			$payment_amount = 0;
+		}
 
 		global $current_user;
 		$user_id   = 0;
@@ -1449,7 +1674,7 @@ class GFPersian_Gateway_Zibal
 		$entry["payment_amount"] = $payment_amount;
 		$entry["payment_date"]   = $payment_date;
 		$entry["transaction_id"] = $payment_transaction;
-		if ($payment_status == 'Paid' || $payment_status == 'Active') {
+		if ($is_paid_status) {
 			$entry["is_fulfilled"] = 1;
 		} else {
 			$entry["is_fulfilled"] = 0;
@@ -1480,7 +1705,7 @@ class GFPersian_Gateway_Zibal
 				break;
 		}
 
-		RGFormsModel::add_note($entry["id"], $user_id, $user_name, sprintf(__("اطلاعات تراکنش به صورت دستی ویرایش شد . وضعیت : %s - مبلغ : %s - کد رهگیری : %s - تاریخ : %s", "gravityformszibal"), $new_status, GFCommon::to_money($entry["payment_amount"], $entry["currency"]), $payment_transaction, $entry["payment_date"]));
+		GFFormsModel::add_note($entry["id"], $user_id, $user_name, sprintf(__("اطلاعات تراکنش به صورت دستی ویرایش شد . وضعیت : %s - مبلغ : %s - کد رهگیری : %s - تاریخ : %s", "gravityformszibal"), $new_status, GFCommon::to_money($entry["payment_amount"], $entry["currency"]), $payment_transaction, $entry["payment_date"]));
 	}
 
 	private static function get_payment_status_label($payment_status)
@@ -1653,6 +1878,9 @@ class GFPersian_Gateway_Zibal
 	private static function get_zibal_transaction_id($response, $fallback = '')
 	{
 		$transaction_id = self::get_zibal_value($response, array('trackId', 'track_id', 'refNumber', 'ref_number'), $fallback);
+		if (!is_scalar($transaction_id) && $transaction_id !== null) {
+			$transaction_id = is_scalar($fallback) || $fallback === null ? $fallback : '';
+		}
 
 		return sanitize_text_field((string) $transaction_id);
 	}
@@ -1661,7 +1889,49 @@ class GFPersian_Gateway_Zibal
 	{
 		$card_number = self::get_zibal_value($response, array('cardNumber', 'card_number', 'cardNo', 'card_no', 'pan', 'maskedCardNumber', 'masked_card_number'));
 
-		return sanitize_text_field((string) $card_number);
+		return self::mask_zibal_card_number($card_number);
+	}
+
+	private static function mask_zibal_card_number($card_number)
+	{
+		if (!is_scalar($card_number) && $card_number !== null) {
+			return '';
+		}
+		$card_number = sanitize_text_field((string) $card_number);
+		$digits = preg_replace('/\D+/', '', $card_number);
+		$length = strlen($digits);
+		if ($length < 12) {
+			return $card_number;
+		}
+
+		return substr($digits, 0, 6) . str_repeat('*', $length - 10) . substr($digits, -4);
+	}
+
+	private static function sanitize_zibal_response_for_storage($response)
+	{
+		if (!is_array($response)) {
+			return is_scalar($response) || $response === null ? sanitize_text_field((string) $response) : '';
+		}
+
+		$sanitized = array();
+		$card_keys = array('cardnumber', 'card_number', 'cardno', 'card_no', 'pan', 'maskedcardnumber', 'masked_card_number');
+		foreach ($response as $key => $value) {
+			$safe_key = is_int($key) ? $key : preg_replace('/[^A-Za-z0-9_-]/', '', (string) $key);
+			$normalized_key = strtolower((string) $safe_key);
+			if (in_array($normalized_key, $card_keys, true)) {
+				$sanitized[$safe_key] = self::mask_zibal_card_number($value);
+			} else if (strpos($normalized_key, 'token') !== false || in_array($normalized_key, array('merchant', 'merchantid', 'callbackurl', 'callback_url'), true)) {
+				$sanitized[$safe_key] = '[redacted]';
+			} else if ($normalized_key === 'body') {
+				$sanitized[$safe_key] = is_scalar($value) || $value === null ? sanitize_text_field(substr((string) $value, 0, 2048)) : '';
+			} else if (is_array($value)) {
+				$sanitized[$safe_key] = self::sanitize_zibal_response_for_storage($value);
+			} else {
+				$sanitized[$safe_key] = is_scalar($value) || $value === null ? sanitize_text_field((string) $value) : '';
+			}
+		}
+
+		return $sanitized;
 	}
 
 	private static function persist_zibal_card_number($entry_id, $card_number, $entry = null)
@@ -1678,7 +1948,7 @@ class GFPersian_Gateway_Zibal
 		}
 
 		if (!is_wp_error($entry) && is_array($entry) && !empty($entry['post_id'])) {
-			update_post_meta($entry['post_id'], 'zibal_card_number', $card_number);
+			update_post_meta($entry['post_id'], '_zibal_card_number', $card_number);
 		}
 	}
 
@@ -1722,8 +1992,10 @@ class GFPersian_Gateway_Zibal
 			return;
 		}
 
+		$updated = false;
 		if (method_exists('GFAPI', 'update_entry_property')) {
-			GFAPI::update_entry_property($entry_id, $property_name, $value);
+			$result = GFAPI::update_entry_property($entry_id, $property_name, $value);
+			$updated = !is_wp_error($result) && $result !== false;
 		} else {
 			if (empty($entry) || !is_array($entry)) {
 				$entry = GFPersian_Payments::get_entry($entry_id);
@@ -1731,7 +2003,8 @@ class GFPersian_Gateway_Zibal
 
 			if (!is_wp_error($entry) && is_array($entry)) {
 				$entry[$property_name] = $value;
-				GFAPI::update_entry($entry);
+				$result = GFAPI::update_entry($entry);
+				$updated = !is_wp_error($result) && $result !== false;
 			}
 		}
 
@@ -1739,7 +2012,9 @@ class GFPersian_Gateway_Zibal
 			$entry[$property_name] = $value;
 		}
 
-		self::update_entry_property_in_database($entry_id, $property_name, $value);
+		if (!$updated) {
+			self::update_entry_property_in_database($entry_id, $property_name, $value);
+		}
 	}
 
 	private static function persist_payment_fields($entry_id, $fields, &$entry = null)
@@ -1764,9 +2039,8 @@ class GFPersian_Gateway_Zibal
 
 		if (!is_wp_error($entry) && is_array($entry)) {
 			if (!empty($entry['post_id'])) {
-				update_post_meta($entry['post_id'], 'transaction_id', $transaction_id);
-				update_post_meta($entry['post_id'], 'zibal_transaction_id', $transaction_id);
-				update_post_meta($entry['post_id'], 'zibal_track_id', $transaction_id);
+				update_post_meta($entry['post_id'], '_zibal_transaction_id', $transaction_id);
+				update_post_meta($entry['post_id'], '_zibal_track_id', $transaction_id);
 			}
 		}
 
@@ -1777,7 +2051,9 @@ class GFPersian_Gateway_Zibal
 
 	private static function get_zibal_result_code($response)
 	{
-		return self::get_zibal_value($response, 'result');
+		$result_code = self::get_zibal_value($response, 'result');
+
+		return is_scalar($result_code) || $result_code === null ? $result_code : 'invalid_response';
 	}
 
 	private static function get_zibal_error_message($response)
@@ -1787,8 +2063,8 @@ class GFPersian_Gateway_Zibal
 
 		if (!is_numeric($result_code)) {
 			$response_message = self::get_zibal_value($response, 'message');
-			if (!empty($response_message)) {
-				$message = $response_message;
+			if ((is_scalar($response_message) || $response_message === null) && $response_message !== '') {
+				$message = sanitize_text_field((string) $response_message);
 			}
 		}
 
@@ -1801,7 +2077,7 @@ class GFPersian_Gateway_Zibal
 			return;
 		}
 
-		$response = self::normalize_zibal_response($response);
+		$response = self::sanitize_zibal_response_for_storage(self::normalize_zibal_response($response));
 		$json     = wp_json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 		if (!empty($json)) {
@@ -1823,7 +2099,7 @@ class GFPersian_Gateway_Zibal
 		$saved_meta = array();
 		foreach ($meta_map as $meta_key => $keys) {
 			$value = self::get_zibal_value($response, $keys);
-			if ($value !== '') {
+			if ($value !== '' && (is_scalar($value) || $value === null)) {
 				$value = sanitize_text_field((string) $value);
 				gform_update_meta($entry_id, $meta_key, $value);
 				$saved_meta[$meta_key] = $value;
@@ -1833,6 +2109,9 @@ class GFPersian_Gateway_Zibal
 		foreach ((array) $extra_meta as $meta_key => $value) {
 			if ($value !== '' && $value !== null) {
 				$meta_key = sanitize_key($meta_key);
+				if ($meta_key === 'zibal_callback_url') {
+					$value = esc_url_raw(remove_query_arg('zibal_token', (string) $value));
+				}
 				$value = sanitize_text_field((string) $value);
 				gform_update_meta($entry_id, $meta_key, $value);
 				$saved_meta[$meta_key] = $value;
@@ -1843,7 +2122,9 @@ class GFPersian_Gateway_Zibal
 			$entry = self::get_entry_for_payment($entry_id);
 			if (!is_wp_error($entry) && is_array($entry) && !empty($entry['post_id'])) {
 				foreach ($saved_meta as $meta_key => $value) {
-					update_post_meta($entry['post_id'], $meta_key, $value);
+					if (isset($meta_map[$meta_key]) && $meta_key !== 'zibal_message') {
+						update_post_meta($entry['post_id'], '_' . $meta_key, $value);
+					}
 				}
 			}
 		}
@@ -1855,7 +2136,7 @@ class GFPersian_Gateway_Zibal
 			return;
 		}
 
-		$response = self::normalize_zibal_response($response);
+		$response = self::sanitize_zibal_response_for_storage(self::normalize_zibal_response($response));
 		$json     = wp_json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		$note     = $title;
 
@@ -1867,7 +2148,7 @@ class GFPersian_Gateway_Zibal
 			$note .= "\n" . __('پاسخ کامل زیبال:', 'gravityformszibal') . "\n" . $json;
 		}
 
-		RGFormsModel::add_note($entry_id, $user_id, $user_name, $note);
+		GFFormsModel::add_note($entry_id, $user_id, $user_name, $note);
 	}
 
 	private static function get_zibal_request_headers()
@@ -1889,12 +2170,14 @@ class GFPersian_Gateway_Zibal
 
 	public static function settings_page()
 	{
-
+		if (!self::has_access()) {
+			wp_die(esc_html__('شما مجوز کافی برای مشاهده تنظیمات زیبال را ندارید.', 'gravityformszibal'));
+		}
 
 		if (rgpost("uninstall")) {
 			check_admin_referer("uninstall", "gf_zibal_uninstall");
 			self::uninstall();
-			echo '<div class="updated fade" style="padding:20px;">' . __("درگاه با موفقیت غیرفعال شد و اطلاعات مربوط به آن نیز از بین رفت برای فعالسازی مجدد میتوانید از طریق افزونه های وردپرس اقدام نمایید .", "gravityformszibal") . '</div>';
+			echo '<div class="updated fade" style="padding:20px;">' . esc_html__("درگاه با موفقیت غیرفعال شد و اطلاعات مربوط به آن نیز از بین رفت برای فعالسازی مجدد میتوانید از طریق افزونه های وردپرس اقدام نمایید .", "gravityformszibal") . '</div>';
 
 			return;
 		} else if (isset($_POST["gf_zibal_submit"])) {
@@ -1903,10 +2186,11 @@ class GFPersian_Gateway_Zibal
 			$settings = array(
 				"merchent" => rgpost('gf_zibal_merchent'),
 				"gname"    => rgpost('gf_zibal_gname'),
+				"direct"   => rgpost('gf_zibal_direct') === '1' ? '1' : '',
 			);
 			update_option("gf_zibal_settings", array_map('sanitize_text_field', $settings));
 			if (isset($_POST["gf_zibal_configured"])) {
-				update_option("gf_zibal_configured", sanitize_text_field($_POST["gf_zibal_configured"]));
+				update_option("gf_zibal_configured", sanitize_text_field(wp_unslash($_POST["gf_zibal_configured"])));
 			} else {
 				delete_option("gf_zibal_configured");
 			}
@@ -1919,17 +2203,17 @@ class GFPersian_Gateway_Zibal
 			if (isset($_POST["gf_zibal_configured"]) && ($Response = self::Request('valid_checker', '', '', '')) && $Response != false) {
 
 				if ($Response === true) {
-					echo '<div class="updated fade" style="padding:6px">' . __("ارتباط با درگاه برقرار شد و اطلاعات وارد شده صحیح است .", "gravityformszibal") . '</div>';
+					echo '<div class="updated fade" style="padding:6px">' . esc_html__("ارتباط با درگاه برقرار شد و اطلاعات وارد شده صحیح است .", "gravityformszibal") . '</div>';
 				} else if ($Response == 'sandbox') {
-					echo '<div class="updated fade" style="padding:6px">' . __("در حالت تستی نیاز به ورود اطلاعات صحیح نمی باشد .", "gravityformszibal") . '</div>';
+					echo '<div class="updated fade" style="padding:6px">' . esc_html__("در حالت تستی نیاز به ورود اطلاعات صحیح نمی باشد .", "gravityformszibal") . '</div>';
 				} else {
 					echo '<div class="error fade" style="padding:6px">' . esc_html($Response) . '</div>';
 				}
 			} else {
-				echo '<div class="updated fade" style="padding:6px">' . __("تنظیمات ذخیره شدند .", "gravityformszibal") . '</div>';
+				echo '<div class="updated fade" style="padding:6px">' . esc_html__("تنظیمات ذخیره شدند .", "gravityformszibal") . '</div>';
 			}
-		} else if (isset($_GET['subview']) && $_GET['subview'] == 'gf_zibal' && isset($_GET['updated'])) {
-			echo '<div class="updated fade" style="padding:6px">' . __("تنظیمات ذخیره شدند .", "gravityformszibal") . '</div>';
+		} else if (isset($_GET['subview']) && sanitize_key(wp_unslash($_GET['subview'])) === 'gf_zibal' && isset($_GET['updated'])) {
+			echo '<div class="updated fade" style="padding:6px">' . esc_html__("تنظیمات ذخیره شدند .", "gravityformszibal") . '</div>';
 		}
 		?>
 
@@ -1980,6 +2264,14 @@ class GFPersian_Gateway_Zibal
 					</th>
 					<td>
 						<input style="width:350px;" type="text" id="gf_zibal_gname" name="gf_zibal_gname" value="<?php echo esc_attr($gateway_title); ?>" />
+					</td>
+				</tr>
+
+				<tr>
+					<th scope="row"><label for="gf_zibal_direct"><?php esc_html_e("انتقال مستقیم به صفحه پرداخت", "gravityformszibal"); ?></label></th>
+					<td>
+						<input type="checkbox" name="gf_zibal_direct" id="gf_zibal_direct" value="1" <?php checked(rgar($settings, 'direct'), '1'); ?> />
+						<span class="description"><?php esc_html_e("در صورت پشتیبانی زیبال، کاربر مستقیماً وارد صفحه پرداخت می‌شود.", "gravityformszibal"); ?></span>
 					</td>
 				</tr>
 
@@ -2045,6 +2337,23 @@ class GFPersian_Gateway_Zibal
 	}
 
 
+	private static function normalize_mobile($mobile)
+	{
+		$original_mobile = sanitize_text_field((string) $mobile);
+		$normalized_mobile = GFPersian_Payments::fix_mobile($original_mobile);
+
+		return is_scalar($normalized_mobile) && (string) $normalized_mobile !== ''
+			? sanitize_text_field((string) $normalized_mobile)
+			: $original_mobile;
+	}
+
+
+	private static function convert_amount_to_rial($amount, $entry, $form)
+	{
+		return GFPersian_Payments::amount($amount, 'IRR', $entry, $form);
+	}
+
+
 	private static function get_direct()
 	{
 		$settings = get_option("gf_zibal_settings");
@@ -2058,6 +2367,9 @@ class GFPersian_Gateway_Zibal
 
 	private static function config_page()
 	{
+		if (!self::has_access()) {
+			wp_die(esc_html__('شما مجوز کافی برای مدیریت فید زیبال را ندارید.', 'gravityformszibal'));
+		}
 
 		wp_register_style('gform_admin_zibal', GFCommon::get_base_url() . '/css/admin.css');
 		wp_print_styles(array('jquery-ui-styles', 'gform_admin_zibal', 'wp-pointer')); ?>
@@ -2073,11 +2385,18 @@ class GFPersian_Gateway_Zibal
 		<div class="wrap gforms_edit_form gf_browser_gecko">
 
 			<?php
-			$id        = !rgempty("zibal_setting_id") ? rgpost("zibal_setting_id") : absint(rgget("id"));
+			$id        = !rgempty("zibal_setting_id") ? absint(rgpost("zibal_setting_id")) : absint(rgget("id"));
 			$config    = empty($id) ? array(
 				"meta"      => array(),
 				"is_active" => true
 			) : GFPersian_DB_Zibal::get_feed($id);
+			if (!empty($id) && empty($config)) {
+				$id = 0;
+				$config = array(
+					"meta"      => array(),
+					"is_active" => true,
+				);
+			}
 			$get_feeds = GFPersian_DB_Zibal::get_feeds();
 			$form_name = '';
 
@@ -2134,20 +2453,53 @@ class GFPersian_Gateway_Zibal
 					if (!is_array($val)) {
 						$safe_data[$key] = sanitize_text_field($val);
 					} else {
-						$safe_data[$key] = array_map('sanitize_text_field', $val);
+						$safe_data[$key] = array();
+						foreach ($val as $array_key => $array_value) {
+							if (is_scalar($array_value) || $array_value === null) {
+								$safe_data[$key][$array_key] = sanitize_text_field((string) $array_value);
+							}
+						}
 					}
+				}
+				$safe_data['type'] = isset($safe_data['type']) && $safe_data['type'] === 'subscription' ? 'subscription' : '';
+				$safe_data['addon'] = isset($safe_data['addon']) && $safe_data['addon'] === 'true' ? 'true' : '';
+				$allowed_post_actions_1 = array('default', 'publish', 'draft', 'pending', 'private');
+				$allowed_post_actions_2 = array('dont', 'default', 'publish', 'draft', 'pending', 'private');
+				$safe_data['update_post_action1'] = in_array(rgar($safe_data, 'update_post_action1'), $allowed_post_actions_1, true) ? $safe_data['update_post_action1'] : 'default';
+				$safe_data['update_post_action2'] = in_array(rgar($safe_data, 'update_post_action2'), $allowed_post_actions_2, true) ? $safe_data['update_post_action2'] : 'dont';
+				$safe_data['zibal_conditional_enabled'] = !empty($safe_data['zibal_conditional_enabled']) ? '1' : '';
+				$safe_data['zibal_conditional_type'] = rgar($safe_data, 'zibal_conditional_type') === 'all' ? 'all' : 'any';
+
+				$condition_fields = isset($config['meta']['zibal_conditional_field_id']) && is_array($config['meta']['zibal_conditional_field_id']) ? $config['meta']['zibal_conditional_field_id'] : array();
+				$condition_operators_post = isset($config['meta']['zibal_conditional_operator']) && is_array($config['meta']['zibal_conditional_operator']) ? $config['meta']['zibal_conditional_operator'] : array();
+				$condition_values_post = isset($config['meta']['zibal_conditional_value']) && is_array($config['meta']['zibal_conditional_value']) ? $config['meta']['zibal_conditional_value'] : array();
+				$safe_data['zibal_conditional_field_id'] = array();
+				$safe_data['zibal_conditional_operator'] = array();
+				$safe_data['zibal_conditional_value'] = array();
+				$allowed_condition_operators = array('is', 'isnot', '>', '<', 'contains', 'starts_with', 'ends_with');
+				foreach ($condition_fields as $condition_index => $condition_field) {
+					$condition_index = absint($condition_index);
+					if ($condition_index < 1) {
+						continue;
+					}
+					$condition_operator = isset($condition_operators_post[$condition_index]) ? sanitize_text_field($condition_operators_post[$condition_index]) : 'is';
+					$safe_data['zibal_conditional_field_id'][$condition_index] = sanitize_text_field($condition_field);
+					$safe_data['zibal_conditional_operator'][$condition_index] = in_array($condition_operator, $allowed_condition_operators, true) ? $condition_operator : 'is';
+					$safe_data['zibal_conditional_value'][$condition_index] = isset($condition_values_post[$condition_index]) ? sanitize_text_field($condition_values_post[$condition_index]) : '';
 				}
 				$config["meta"] = $safe_data;
 
 				$config = apply_filters(self::$author . '_gform_gateway_save_config', $config);
 				$config = apply_filters(self::$author . '_gform_zibal_save_config', $config);
 
-				$id = GFPersian_DB_Zibal::update_feed($id, $config["form_id"], $config["is_active"], $config["meta"]);
+				$is_active = isset($config["is_active"]) ? (int) (bool) $config["is_active"] : 1;
+				$id = GFPersian_DB_Zibal::update_feed(absint($id), $config["form_id"], $is_active, $config["meta"]);
 				if (!headers_sent()) {
-					wp_redirect(admin_url('admin.php?page=gf_zibal&view=edit&id=' . $id . '&updated=true'));
+					wp_safe_redirect(admin_url('admin.php?page=gf_zibal&view=edit&id=' . $id . '&updated=true'));
 					exit;
 				} else {
-					echo "<script type='text/javascript'>window.onload = function () { top.location.href = '" . admin_url('admin.php?page=gf_zibal&view=edit&id=' . $id . '&updated=true') . "'; };</script>";
+					$redirect_url = wp_json_encode(admin_url('admin.php?page=gf_zibal&view=edit&id=' . absint($id) . '&updated=true'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+					echo "<script type='text/javascript'>window.onload = function () { top.location.href = " . $redirect_url . "; };</script>";
 					exit;
 				}
 			?>
@@ -2159,7 +2511,7 @@ class GFPersian_Gateway_Zibal
 
 			$form = array();
 			if (!empty($_get_form_id)) {
-				$form = RGFormsModel::get_form_meta($_get_form_id);
+				$form = GFFormsModel::get_form_meta($_get_form_id);
 			}
 
 			if (rgget('updated') == 'true') {
@@ -2186,7 +2538,8 @@ class GFPersian_Gateway_Zibal
 							<label for="export_form"><?php _e('یک فید انتخاب کنید', 'gravityformszibal') ?></label>
 							<?php
 							$feeds = GFPersian_DB_Zibal::get_feeds();
-							if (RG_CURRENT_VIEW != 'entry') { ?>
+							$current_view = (string) rgget('view');
+							if ($current_view !== 'entry') { ?>
 								<select name="form_switcher" id="form_switcher" onchange="GF_SwitchForm(jQuery(this).val());">
 									<option value=""><?php _e('تغییر فید زیبال', 'gravityformszibal') ?></option>
 									<?php foreach ($feeds as $feed) {
@@ -2346,7 +2699,6 @@ class GFPersian_Gateway_Zibal
 												</td>
 											</tr>
 
-
 											<?php $display_post_fields = !empty($form) ? GFCommon::has_post_field($form["fields"]) : false; ?>
 
 											<tr <?php echo $display_post_fields ? "" : "style='display:none;'" ?>>
@@ -2442,12 +2794,12 @@ class GFPersian_Gateway_Zibal
 																	ksort($condition_field_ids);
 																	foreach ($condition_field_ids as $i => $value) : ?>
 
-																		<div class="gf_zibal_conditional_div" id="gf_zibal_<?php echo $i; ?>__conditional_div">
+																					<div class="gf_zibal_conditional_div" id="gf_zibal_<?php echo absint($i); ?>__conditional_div">
 
-																			<select class="gf_zibal_conditional_field_id" id="gf_zibal_<?php echo $i; ?>__conditional_field_id" name="gf_zibal_conditional_field_id[<?php echo $i; ?>]" title="">
+																						<select class="gf_zibal_conditional_field_id" id="gf_zibal_<?php echo absint($i); ?>__conditional_field_id" name="gf_zibal_conditional_field_id[<?php echo absint($i); ?>]" title="">
 																			</select>
 
-																			<select class="gf_zibal_conditional_operator" id="gf_zibal_<?php echo $i; ?>__conditional_operator" name="gf_zibal_conditional_operator[<?php echo $i; ?>]" style="font-family:tahoma,serif !important" title="">
+																						<select class="gf_zibal_conditional_operator" id="gf_zibal_<?php echo absint($i); ?>__conditional_operator" name="gf_zibal_conditional_operator[<?php echo absint($i); ?>]" style="font-family:tahoma,serif !important" title="">
 																				<option value="is"><?php _e("هست", "gravityformszibal") ?></option>
 																				<option value="isnot"><?php _e("نیست", "gravityformszibal") ?></option>
 																				<option value=">"><?php _e("بیشتر یا بزرگتر از", "gravityformszibal") ?></option>
@@ -2457,7 +2809,7 @@ class GFPersian_Gateway_Zibal
 																				<option value="ends_with"><?php _e("تمام میشود با", "gravityformszibal") ?></option>
 																			</select>
 
-																			<div id="gf_zibal_<?php echo $i; ?>__conditional_value_container" style="display:inline;">
+																						<div id="gf_zibal_<?php echo absint($i); ?>__conditional_value_container" style="display:inline;">
 																			</div>
 
 																			<a class="add_new_condition gficon_link" href="#">
@@ -2470,7 +2822,7 @@ class GFPersian_Gateway_Zibal
 																		</div>
 																	<?php endforeach; ?>
 
-																	<input type="hidden" value="<?php echo key(array_slice($condition_field_ids, -1, 1, true)); ?>" id="gf_zibal_conditional_counter">
+																	<input type="hidden" value="<?php echo absint(key(array_slice($condition_field_ids, -1, 1, true))); ?>" id="gf_zibal_conditional_counter">
 
 																	<div id="gf_no_conditional_message" style="display:none;background-color:#FFDFDF; margin-top:4px; margin-bottom:6px; padding-top:6px; padding:18px; border:1px dotted #C89797;">
 																		<?php _e("برای قرار دادن منطق شرطی، باید فیلدهای فرم شما هم قابلیت منطق شرطی را داشته باشند.", "gravityformszibal") ?>
@@ -2543,7 +2895,7 @@ class GFPersian_Gateway_Zibal
 			}
 
 			var form = [];
-			form = <?php echo !empty($form) ? GFCommon::json_encode($form) : GFCommon::json_encode(array()) ?>;
+			form = <?php echo wp_json_encode(!empty($form) ? $form : array(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
 			jQuery(document).ready(function($) {
 
@@ -2586,10 +2938,10 @@ class GFPersian_Gateway_Zibal
 				});
 
 				<?php foreach ($condition_field_ids as $i => $field_id) : ?>
-					selectedField = "<?php echo str_replace('"', '\"', $field_id) ?>";
-					selectedValue = "<?php echo str_replace('"', '\"', $condition_values['' . $i . '']) ?>";
-					selectedOperator = "<?php echo str_replace('"', '\"', $condition_operators['' . $i . '']) ?>";
-					RefreshConditionRow("gf_zibal_<?php echo $i; ?>__conditional", selectedField, selectedOperator, selectedValue, <?php echo $i; ?>);
+					selectedField = <?php echo wp_json_encode((string) $field_id, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+					selectedValue = <?php echo wp_json_encode((string) rgar($condition_values, $i), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+					selectedOperator = <?php echo wp_json_encode((string) rgar($condition_operators, $i, 'is'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+					RefreshConditionRow("gf_zibal_<?php echo absint($i); ?>__conditional", selectedField, selectedOperator, selectedValue, <?php echo absint($i); ?>);
 				<?php endforeach; ?>
 			});
 
@@ -2755,7 +3107,7 @@ class GFPersian_Gateway_Zibal
 
 			if (!$custom) {
 
-				if (RGForms::post("gform_submit") != $form['id']) {
+				if (GFForms::post("gform_submit") != $form['id']) {
 					return $confirmation;
 				}
 
@@ -2763,12 +3115,13 @@ class GFPersian_Gateway_Zibal
 				if (empty($config)) {
 					return $confirmation;
 				}
+				$config_meta = is_array(rgar($config, 'meta')) ? rgar($config, 'meta') : array();
 
 				gform_update_meta($entry['id'], 'zibal_feed_id', $config['id']);
 				gform_update_meta($entry['id'], 'payment_type', 'form');
 				gform_update_meta($entry['id'], 'payment_gateway', self::get_gname());
 
-				switch ($config["meta"]["type"]) {
+				switch ((string) rgar($config_meta, 'type')) {
 					case "subscription":
 						$transaction_type = 2;
 						break;
@@ -2779,17 +3132,18 @@ class GFPersian_Gateway_Zibal
 				}
 
 				if (GFCommon::has_post_field($form["fields"])) {
-					if (!empty($config["meta"]["update_post_action2"])) {
-						if ($config["meta"]["update_post_action2"] != 'dont') {
-							if ($config["meta"]["update_post_action2"] != 'default') {
-								$form['postStatus'] = $config["meta"]["update_post_action2"];
+					$update_post_action = (string) rgar($config_meta, 'update_post_action2');
+					if ($update_post_action !== '') {
+						if ($update_post_action != 'dont') {
+							if ($update_post_action != 'default') {
+								$form['postStatus'] = $update_post_action;
 							}
 						} else {
 							$dont_create = true;
 						}
 					}
 					if (empty($dont_create)) {
-						RGFormsModel::create_post($form, $entry);
+						GFFormsModel::create_post($form, $entry);
 					}
 				}
 
@@ -2803,21 +3157,26 @@ class GFPersian_Gateway_Zibal
 					unset($entry["payment_status"], $entry["payment_method"], $entry["is_fulfilled"], $entry["transaction_type"], $entry["payment_amount"], $entry["payment_date"]);
 					$entry["payment_method"] = "zibal";
 					GFAPI::update_entry($entry);
+					gform_delete_meta($entry['id'], 'zibal_requested_amount');
+					gform_delete_meta($entry['id'], 'zibal_track_id');
+					gform_update_meta($entry['id'], 'zibal_payment_state', 'free_pending');
 
 					return self::redirect_confirmation(add_query_arg(array('no' => 'true'), self::Return_URL($form['id'], $entry['id'])), $ajax);
 				} else {
 
 					$Desc1 = '';
-					if (!empty($config["meta"]["desc_pm"])) {
+					$description_template = (string) rgar($config_meta, 'desc_pm');
+					if ($description_template !== '') {
 						$Desc1 = str_replace(array('{entry_id}', '{form_title}', '{form_id}'), array(
 							$entry['id'],
 							$form['title'],
 							$form['id']
-						), $config["meta"]["desc_pm"]);
+						), $description_template);
 					}
 					$Desc2 = '';
-					if (rgpost('input_' . str_replace(".", "_", $config["meta"]["customer_fields_desc"]))) {
-						$Desc2 = rgpost('input_' . str_replace(".", "_", $config["meta"]["customer_fields_desc"]));
+					$description_field = (string) rgar($config_meta, 'customer_fields_desc');
+					if ($description_field !== '' && rgpost('input_' . str_replace(".", "_", $description_field))) {
+						$Desc2 = rgpost('input_' . str_replace(".", "_", $description_field));
 					}
 
 					if (!empty($Desc1) && !empty($Desc2)) {
@@ -2832,13 +3191,15 @@ class GFPersian_Gateway_Zibal
 					$Description = sanitize_text_field($Description);
 
 					$Email = '';
-					if (rgpost('input_' . str_replace(".", "_", $config["meta"]["customer_fields_email"]))) {
-						$Email = sanitize_text_field(rgpost('input_' . str_replace(".", "_", $config["meta"]["customer_fields_email"])));
+					$email_field = (string) rgar($config_meta, 'customer_fields_email');
+					if ($email_field !== '' && rgpost('input_' . str_replace(".", "_", $email_field))) {
+						$Email = sanitize_text_field(rgpost('input_' . str_replace(".", "_", $email_field)));
 					}
 
 					$Mobile = '';
-					if (rgpost('input_' . str_replace(".", "_", $config["meta"]["customer_fields_mobile"]))) {
-						$Mobile = sanitize_text_field(rgpost('input_' . str_replace(".", "_", $config["meta"]["customer_fields_mobile"])));
+					$mobile_field = (string) rgar($config_meta, 'customer_fields_mobile');
+					if ($mobile_field !== '' && rgpost('input_' . str_replace(".", "_", $mobile_field))) {
+						$Mobile = sanitize_text_field(rgpost('input_' . str_replace(".", "_", $mobile_field)));
 					}
 				}
 			} else {
@@ -2896,13 +3257,13 @@ class GFPersian_Gateway_Zibal
 			$ResNumber   = rand(1000, 9999);
 			$Description = __('جهت بررسی صحیح بودن تنظیمات درگاه گرویتی فرم زیبال', 'gravityformszibal');
 		}
-		$Mobile = GFPersian_Payments::fix_mobile($Mobile);
+		$Mobile = self::normalize_mobile($Mobile);
 
 		do_action('gf_gateway_request_2', $confirmation, $form, $entry, $ajax);
 		do_action('gf_zibal_request_2', $confirmation, $form, $entry, $ajax);
 
 		if (!$custom) {
-			$Amount = GFPersian_Payments::amount($Amount, 'IRR', $form, $entry);
+			$Amount = self::convert_amount_to_rial($Amount, $entry, $form);
 		}
 
 		if (!$valid_checker && !empty($entry_id)) {
@@ -2913,17 +3274,30 @@ class GFPersian_Gateway_Zibal
 
 		$direct = self::get_direct();
 		$merchantId = self::get_merchent();
+		$order_id = sanitize_text_field((string) $ResNumber);
+		$order_id = substr($order_id, 0, 128);
+		if (!$valid_checker && !empty($entry_id)) {
+			gform_update_meta($entry_id, 'zibal_requested_order_id', $order_id);
+		}
 
-		$Result = self::sendRequestToZibal(
-			'request',
-			array(
-				'merchant'  => $merchantId,
-				'amount'      => $Amount,
-				'description' => $Description,
-				'mobile'      => $Mobile,
-				'callbackUrl' => $ReturnPath
-			)
-		);
+		if (!is_numeric($Amount) || (float) $Amount <= 0 || !is_finite((float) $Amount)) {
+			$Result = array(
+				'result'  => 'invalid_amount',
+				'message' => __('مبلغ پرداخت معتبر نیست.', 'gravityformszibal'),
+			);
+		} else {
+			$Result = self::sendRequestToZibal(
+				'request',
+				array(
+					'merchant'  => $merchantId,
+					'amount'      => $Amount,
+					'description' => $Description,
+					'mobile'      => $Mobile,
+					'orderId'     => $order_id,
+					'callbackUrl' => $ReturnPath
+				)
+			);
+		}
 
 		if (!$valid_checker && !empty($entry_id)) {
 			self::store_zibal_response($entry_id, 'request', $Result, array(
@@ -2960,13 +3334,23 @@ class GFPersian_Gateway_Zibal
 			return $Message;
 		}
 
-		$entry                   = self::get_entry_for_payment($entry_id);
-		$entry['payment_status'] = 'Failed';
+		$entry = self::get_entry_for_payment($entry_id);
+		$request_is_retryable = self::is_retryable_zibal_result($result_code);
+		$entry['payment_status'] = $request_is_retryable ? 'Processing' : 'Failed';
+		$entry['payment_amount'] = 0;
+		$entry['payment_date'] = '';
+		$entry['is_fulfilled'] = 0;
 		GFAPI::update_entry($entry);
-		gform_update_meta($entry_id, 'zibal_payment_state', 'failed');
+		self::persist_payment_fields($entry_id, array(
+			'payment_status' => $entry['payment_status'],
+			'payment_amount' => $entry['payment_amount'],
+			'payment_date'   => $entry['payment_date'],
+			'is_fulfilled'   => $entry['is_fulfilled'],
+		), $entry);
+		gform_update_meta($entry_id, 'zibal_payment_state', $request_is_retryable ? 'pending_review' : 'failed');
 		gform_update_meta($entry_id, 'zibal_payment_result', 'failure');
 
-		RGFormsModel::add_note($entry_id, $user_id, $user_name, sprintf(__('خطا در اتصال به درگاه رخ داده است : %s', "gravityformszibal"), $Message));
+		GFFormsModel::add_note($entry_id, $user_id, $user_name, sprintf(__('خطا در اتصال به درگاه رخ داده است : %s', "gravityformszibal"), $Message));
 		self::add_zibal_response_note($entry_id, $user_id, $user_name, __('جزئیات کامل پاسخ زیبال هنگام اتصال به درگاه', 'gravityformszibal'), $Result, $Message);
 
 		if (!$custom) {
@@ -3014,14 +3398,18 @@ class GFPersian_Gateway_Zibal
 		}
 
 		$stored_payment_token = (string) gform_get_meta($entry_id, 'zibal_payment_token');
-		$callback_payment_token = isset($_GET['zibal_token']) ? sanitize_text_field(wp_unslash($_GET['zibal_token'])) : '';
-		if ($stored_payment_token !== '' && ($callback_payment_token === '' || !hash_equals($stored_payment_token, $callback_payment_token))) {
+		$callback_payment_token = isset($_GET['zibal_token']) ? substr(sanitize_text_field(wp_unslash($_GET['zibal_token'])), 0, 128) : '';
+		if ($stored_payment_token === '' || $callback_payment_token === '' || !self::secure_equals($stored_payment_token, $callback_payment_token)) {
 			return;
 		}
+		$callback_is_free = isset($_GET['no']) && sanitize_key(wp_unslash($_GET['no'])) === 'true';
+		$callback_success = isset($_GET['success']) ? sanitize_text_field(wp_unslash($_GET['success'])) : '';
+		$callback_success = substr($callback_success, 0, 16);
+		$callback_track_id = isset($_GET['trackId']) ? substr(sanitize_text_field(wp_unslash($_GET['trackId'])), 0, 128) : '';
 
 		if (isset($entry["payment_method"]) && $entry["payment_method"] == 'zibal') {
 
-			$form = RGFormsModel::get_form_meta($form_id);
+			$form = GFFormsModel::get_form_meta($form_id);
 
 			$payment_type = gform_get_meta($entry["id"], 'payment_type');
 
@@ -3035,9 +3423,13 @@ class GFPersian_Gateway_Zibal
 			}
 
 
-			if (!empty($entry["payment_date"])) {
-				$existing_status = in_array(rgar($entry, 'payment_status'), array('Paid', 'Active'), true) ? 'completed' : 'failed';
-				self::display_payment_confirmation($form, $entry, $existing_status);
+			if (in_array(rgar($entry, 'payment_status'), array('Paid', 'Active'), true)) {
+				$stored_track_id = substr(sanitize_text_field((string) gform_get_meta($entry['id'], 'zibal_track_id')), 0, 128);
+				$is_completed_free_payment = $callback_is_free && (float) rgar($entry, 'payment_amount') === 0.0 && (string) gform_get_meta($entry['id'], 'zibal_payment_state') === 'completed';
+				$is_matching_paid_callback = !$callback_is_free && $callback_success === '1' && $stored_track_id !== '' && $callback_track_id !== '' && self::secure_equals($stored_track_id, $callback_track_id);
+				if ($is_completed_free_payment || $is_matching_paid_callback) {
+					self::display_payment_confirmation($form, $entry, 'completed');
+				}
 
 				return;
 			}
@@ -3062,85 +3454,134 @@ class GFPersian_Gateway_Zibal
 			}
 			$Total_Money = GFCommon::to_money($Total, $entry["currency"]);
 
+			$verification_lock_acquired = self::acquire_verification_lock($entry['id']);
+			if (!$verification_lock_acquired) {
+				$locked_entry = self::get_entry_for_payment($entry['id']);
+				if (!is_wp_error($locked_entry) && in_array(rgar($locked_entry, 'payment_status'), array('Paid', 'Active'), true)) {
+					self::display_payment_confirmation($form, $locked_entry, 'completed');
+				}
+
+				return;
+			}
+
 			$free = false;
 			$Result = array();
-			$callback_track_id = '';
-			if (empty($_GET['no']) || $_GET['no'] != 'true') {
+			$Transaction_ID = '';
+			$Message = '';
+			$Status = 'failed';
+			$__params = '';
+			if (!$callback_is_free) {
 
 				//Start of Zibal
 				if ($payment_type != 'custom') {
-					$Amount = GFPersian_Payments::amount($Amount, 'IRR', $form, $entry);
+					$Amount = self::convert_amount_to_rial($Amount, $entry, $form);
 				}
 
 
-				if (isset($_GET['success']) &&  $_GET['success']  == '1') {
+				if ($callback_success === '1') {
 
-					$trackId  = isset($_GET['trackId']) ? sanitize_text_field(wp_unslash($_GET['trackId'])) : '';
+					$trackId  = $callback_track_id;
 					$callback_track_id = $trackId;
 					$merchantId = self::get_merchent();
 					$stored_track_id = sanitize_text_field((string) gform_get_meta($entry['id'], 'zibal_track_id'));
 					$stored_amount = gform_get_meta($entry['id'], 'zibal_requested_amount');
 
-					if ($trackId === '' || $stored_track_id === '' || !hash_equals($stored_track_id, $trackId)) {
+					if ($trackId === '' || $stored_track_id === '' || !self::secure_equals($stored_track_id, $trackId)) {
 						$Message = __('اطلاعات بازگشت پرداخت با تراکنش ثبت‌شده مطابقت ندارد.', 'gravityformszibal');
-						$Status = 'failed';
+						$Status = 'processing';
 					} else if ($stored_amount === '' || !is_numeric($stored_amount) || (float) $stored_amount !== (float) $Amount) {
 						$Message = __('مبلغ پرداخت با مبلغ ثبت‌شده برای این ورودی مطابقت ندارد.', 'gravityformszibal');
-						$Status = 'failed';
-					} else if (!self::acquire_verification_lock($entry['id'])) {
-						return;
+						$Status = 'processing';
 					} else {
 						$__params = $Amount . $trackId;
 						if (GFPersian_Payments::check_verification($entry, __CLASS__, $__params)) {
-							self::release_verification_lock($entry['id']);
-							return;
+							$Result = array(
+								'result'  => 'local_already_verified',
+								'message' => __('این تراکنش قبلاً در سایت ثبت تأیید شده ولی وضعیت محلی آن کامل نیست.', 'gravityformszibal'),
+							);
+						} else {
+							$Result = self::sendRequestToZibal(
+								'verify',
+								array(
+									'merchant' => $merchantId,
+									'trackId'  => $trackId
+								)
+							);
 						}
-
-						$Result = self::sendRequestToZibal(
-							'verify',
-							array(
-								'merchant' => $merchantId,
-								'trackId'  => $trackId
-							)
-						);
-						self::release_verification_lock($entry['id']);
 
 						self::store_zibal_response($entry["id"], 'verify', $Result, array(
 							'zibal_callback_track_id' => $trackId,
-							'zibal_callback_success'  => isset($_GET['success']) ? sanitize_text_field(wp_unslash($_GET['success'])) : '',
+							'zibal_callback_success'  => $callback_success,
 						));
 						self::persist_zibal_card_number($entry["id"], self::get_zibal_card_number($Result), $entry);
 
 						$result_code = self::get_zibal_result_code($Result);
 						$verified_amount = self::get_zibal_value($Result, array('amount', 'paidAmount', 'paid_amount'));
+						$verified_order_id = self::get_zibal_value($Result, array('orderId', 'order_id'));
+						$stored_order_id = sanitize_text_field((string) gform_get_meta($entry['id'], 'zibal_requested_order_id'));
+						$order_id_matches = $verified_order_id === '' || (
+							$stored_order_id !== '' &&
+							is_scalar($verified_order_id) &&
+							self::secure_equals($stored_order_id, sanitize_text_field((string) $verified_order_id))
+						);
 
-						if ($result_code == 100 && ($verified_amount === '' || (is_numeric($verified_amount) && (float) $verified_amount === (float) $stored_amount))) {
+						if ($result_code == 100 && !$order_id_matches) {
+							$Message = __('شماره سفارش تأییدشده توسط زیبال با پرداخت ثبت‌شده مطابقت ندارد.', 'gravityformszibal');
+							$Status  = 'processing';
+						} else if ($result_code == 100 && is_numeric($verified_amount) && (float) $verified_amount === (float) $stored_amount) {
 							$Message = '';
 							$Status  = 'completed';
-						} else if ($result_code == 201) {
+						} else if ($result_code == 201 || $result_code === 'local_already_verified') {
 							$Message = __('تراکنش قبلاً در زیبال تأیید شده ولی در این ورودی پرداخت‌شده ثبت نشده است؛ نیاز به بررسی مدیر دارد.', 'gravityformszibal');
-							$Status  = 'failed';
+							$Status  = 'processing';
+						} else if ($result_code == 100 && $verified_amount === '') {
+							$Message = __('پاسخ تأیید زیبال فاقد مبلغ پرداخت است؛ تراکنش برای بررسی مدیر در حالت پردازش باقی ماند.', 'gravityformszibal');
+							$Status  = 'processing';
 						} else if ($result_code == 100) {
 							$Message = __('مبلغ تأییدشده توسط زیبال با مبلغ ثبت‌شده مطابقت ندارد.', 'gravityformszibal');
-							$Status  = 'failed';
+							$Status  = 'processing';
+						} else if (self::is_retryable_zibal_result($result_code)) {
+							$Message = __('ارتباط با زیبال موقتاً کامل نشد. وضعیت پرداخت برای بررسی مجدد در حالت پردازش باقی ماند.', 'gravityformszibal');
+							$Status  = 'processing';
 						} else {
 							$Message = self::get_zibal_error_message($Result);
 							$Status  = 'failed';
 						}
 					}
 				} else {
-					$Message = '';
-					$Status  = 'cancelled';
-					$callback_track_id = isset($_GET['trackId']) ? sanitize_text_field(wp_unslash($_GET['trackId'])) : '';
+					$stored_track_id = sanitize_text_field((string) gform_get_meta($entry['id'], 'zibal_track_id'));
+					if ($stored_track_id === '' || $callback_track_id === '' || !self::secure_equals($stored_track_id, $callback_track_id)) {
+						$Message = __('اطلاعات بازگشت پرداخت با تراکنش ثبت‌شده مطابقت ندارد.', 'gravityformszibal');
+						$Status = 'processing';
+					} else {
+						$Message = '';
+						$Status = 'cancelled';
+					}
 				}
 				$local_track_id = sanitize_text_field((string) gform_get_meta($entry['id'], 'zibal_track_id'));
 				$Transaction_ID = $local_track_id !== '' ? $local_track_id : (!empty($Result) ? self::get_zibal_transaction_id($Result, $callback_track_id) : $callback_track_id);
 				//End of Zibal
 			} else {
-				$Status         = 'completed';
-				$Message        = '';
-				$Transaction_ID = apply_filters(self::$author . '_gf_rand_transaction_id', GFPersian_Payments::transaction_id($entry), $form, $entry);
-				$free           = true;
+				$stored_payment_state = (string) gform_get_meta($entry['id'], 'zibal_payment_state');
+				$stored_requested_amount = gform_get_meta($entry['id'], 'zibal_requested_amount');
+				$stored_track_id = (string) gform_get_meta($entry['id'], 'zibal_track_id');
+				$is_zero_amount = is_numeric($Amount) && (float) $Amount === 0.0;
+
+				$has_requested_amount = $stored_requested_amount !== '' && $stored_requested_amount !== null && $stored_requested_amount !== false;
+				if ($stored_payment_state !== 'free_pending' || $has_requested_amount || $stored_track_id !== '' || !$is_zero_amount) {
+					$Message = __('درخواست پرداخت رایگان معتبر نیست.', 'gravityformszibal');
+					GFFormsModel::add_note($entry['id'], $user_id, $user_name, $Message);
+					self::release_verification_lock($entry['id']);
+					$verification_lock_acquired = false;
+					self::display_payment_confirmation($form, $entry, 'failed', $Message);
+
+					return;
+				} else {
+					$Status = 'completed';
+					$Message = '';
+					$Transaction_ID = apply_filters(self::$author . '_gf_rand_transaction_id', GFPersian_Payments::transaction_id($entry), $form, $entry);
+					$free = true;
+				}
 			}
 
 			$Status         = !empty($Status) ? $Status : 'failed';
@@ -3149,27 +3590,26 @@ class GFPersian_Gateway_Zibal
 			$transaction_id = sanitize_text_field((string) $transaction_id);
 
 			//----------------------------------------------------------------------------------------
-			$entry["payment_date"]     = gmdate("Y-m-d H:i:s");
 			$entry["transaction_id"]   = $transaction_id;
 			$entry["transaction_type"] = $transaction_type;
 
 				if ($Status == 'completed') {
 
+					$entry["payment_date"]     = gmdate("Y-m-d H:i:s");
 					$entry["is_fulfilled"]   = 1;
 					$entry["payment_amount"] = $Total;
 
 				if ($transaction_type == 2) {
 					$entry["payment_status"] = "Active";
-					RGFormsModel::add_note($entry["id"], $user_id, $user_name, __("تغییرات اطلاعات فیلدها فقط در همین پیام ورودی اعمال خواهد شد و بر روی وضعیت کاربر تاثیری نخواهد داشت .", "gravityformszibal"));
+					GFFormsModel::add_note($entry["id"], $user_id, $user_name, __("تغییرات اطلاعات فیلدها فقط در همین پیام ورودی اعمال خواهد شد و بر روی وضعیت کاربر تاثیری نخواهد داشت .", "gravityformszibal"));
 				} else {
 					$entry["payment_status"] = "Paid";
 				}
 
 				if ($free == true) {
-					//unset( $entry["payment_status"] );
-					unset($entry["payment_amount"]);
-					unset($entry["payment_method"]);
-					unset($entry["is_fulfilled"]);
+					$entry["payment_amount"] = 0;
+					$entry["payment_method"] = "zibal";
+					$entry["is_fulfilled"] = 1;
 					gform_delete_meta($entry['id'], 'payment_gateway');
 					$Note = sprintf(__('وضعیت پرداخت : رایگان - بدون نیاز به درگاه پرداخت', "gravityformszibal"));
 				} else {
@@ -3206,7 +3646,7 @@ class GFPersian_Gateway_Zibal
 
 					if (empty($entry["post_id"]) && $has_post) {
 						$form['postStatus'] = $new_status;
-						RGFormsModel::create_post($form, $entry);
+						GFFormsModel::create_post($form, $entry);
 						$entry = self::get_entry_for_payment($entry_id);
 					}
 
@@ -3252,14 +3692,31 @@ class GFPersian_Gateway_Zibal
 				do_action("gform_zibal_fulfillment", $entry, $config, $transaction_id, $Total);
 				do_action("gform_gateway_fulfillment", $entry, $config, $transaction_id, $Total);
 				do_action("gform_paypal_fulfillment", $entry, $paypal_config, $transaction_id, $Total);
+				} else if ($Status == 'processing') {
+					$entry["payment_status"] = "Processing";
+					$entry["payment_amount"] = 0;
+					$entry["payment_date"] = '';
+					$entry["is_fulfilled"] = 0;
+					GFAPI::update_entry($entry);
+					self::persist_payment_fields($entry["id"], array(
+						'payment_status' => $entry["payment_status"],
+						'payment_amount' => $entry["payment_amount"],
+						'payment_date'   => $entry["payment_date"],
+						'is_fulfilled'   => $entry["is_fulfilled"],
+					), $entry);
+					gform_update_meta($entry['id'], 'zibal_payment_state', 'pending_review');
+
+					$Note = sprintf(__('وضعیت پرداخت : نیازمند بررسی - مبلغ قابل پرداخت : %s - کد تراکنش : %s - توضیح : %s', "gravityformszibal"), $Total_Money, $transaction_id, $Message);
 				} else if ($Status == 'cancelled') {
 					$entry["payment_status"] = "Cancelled";
 					$entry["payment_amount"] = 0;
+					$entry["payment_date"] = '';
 					$entry["is_fulfilled"]   = 0;
 					GFAPI::update_entry($entry);
 					self::persist_payment_fields($entry["id"], array(
 						'payment_status' => $entry["payment_status"],
 						'payment_amount' => $entry["payment_amount"],
+						'payment_date'   => $entry["payment_date"],
 						'is_fulfilled'   => $entry["is_fulfilled"],
 					), $entry);
 					gform_update_meta($entry['id'], 'zibal_payment_state', 'cancelled');
@@ -3268,11 +3725,13 @@ class GFPersian_Gateway_Zibal
 				} else {
 					$entry["payment_status"] = "Failed";
 					$entry["payment_amount"] = 0;
+					$entry["payment_date"] = '';
 					$entry["is_fulfilled"]   = 0;
 					GFAPI::update_entry($entry);
 					self::persist_payment_fields($entry["id"], array(
 						'payment_status' => $entry["payment_status"],
 						'payment_amount' => $entry["payment_amount"],
+						'payment_date'   => $entry["payment_date"],
 						'is_fulfilled'   => $entry["is_fulfilled"],
 					), $entry);
 					gform_update_meta($entry['id'], 'zibal_payment_state', 'failed');
@@ -3281,15 +3740,15 @@ class GFPersian_Gateway_Zibal
 				}
 
 			self::persist_zibal_transaction_id($entry["id"], $transaction_id, $entry);
-			RGFormsModel::add_note($entry["id"], $user_id, $user_name, $Note);
+			GFFormsModel::add_note($entry["id"], $user_id, $user_name, $Note);
 			if (!empty($Result) && self::should_add_zibal_response_note($Status)) {
 				self::add_zibal_response_note($entry["id"], $user_id, $user_name, __('جزئیات کامل پاسخ زیبال پس از بازگشت کاربر', 'gravityformszibal'), $Result, $Message);
 			} elseif ($Status == 'cancelled') {
 				$callback_response = array(
 					'result'  => 'cancelled',
 					'message' => __('کاربر از پرداخت منصرف شد یا پرداخت ناموفق به سایت برگشت.', 'gravityformszibal'),
-					'trackId' => isset($_GET['trackId']) ? sanitize_text_field(wp_unslash($_GET['trackId'])) : '',
-					'success' => isset($_GET['success']) ? sanitize_text_field(wp_unslash($_GET['success'])) : '',
+					'trackId' => $callback_track_id,
+					'success' => $callback_success,
 				);
 				self::store_zibal_response($entry["id"], 'callback', $callback_response);
 				self::add_zibal_response_note($entry["id"], $user_id, $user_name, __('جزئیات بازگشت ناموفق/انصرافی زیبال', 'gravityformszibal'), $callback_response, $Message);
@@ -3297,6 +3756,10 @@ class GFPersian_Gateway_Zibal
 			do_action('gform_post_payment_status', $config, $entry, strtolower($Status), $transaction_id, '', $Total, '', '');
 			do_action('gform_post_payment_status_' . __CLASS__, $config, $form, $entry, strtolower($Status), $transaction_id, '', $Total, '', '');
 
+			if ($verification_lock_acquired) {
+				self::release_verification_lock($entry['id']);
+				$verification_lock_acquired = false;
+			}
 
 			if (apply_filters(self::$author . '_gf_zibal_verify', apply_filters(self::$author . '_gf_gateway_verify', ($payment_type != 'custom'), $form, $entry), $form, $entry)) {
 				GFPersian_Payments::notification($form, $entry);
@@ -3307,6 +3770,14 @@ class GFPersian_Gateway_Zibal
 
 	public static function sendRequestToZibal($action, $params)
 	{
+		$action = sanitize_key((string) $action);
+		if (!in_array($action, array('request', 'verify'), true)) {
+			return array(
+				'result'  => 'invalid_action',
+				'message' => __('عملیات درخواستی زیبال معتبر نیست.', 'gravityformszibal'),
+			);
+		}
+
 		try {
 
 			$number_of_connection_tries = 3;
@@ -3356,6 +3827,11 @@ class GFPersian_Gateway_Zibal
 
 			return $decoded;
 		} catch (Exception $ex) {
+			return array(
+				'result'  => 'exception',
+				'message' => $ex->getMessage(),
+			);
+		} catch (Throwable $ex) {
 			return array(
 				'result'  => 'exception',
 				'message' => $ex->getMessage(),

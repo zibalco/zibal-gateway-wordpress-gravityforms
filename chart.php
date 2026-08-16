@@ -9,13 +9,16 @@ class GFPersian_Chart_Zibal
 
 	public static function stats_page()
 	{
+		if (!GFCommon::current_user_can_any('gravityforms_zibal')) {
+			wp_die(esc_html__('شما مجوز کافی برای مشاهده گزارش‌های زیبال را ندارید.', 'gravityformszibal'));
+		}
 
 		if (!empty($_POST)) {
 			check_admin_referer("search", "gf_zibal_chart");
 		}
 
 		$form_id = absint(rgget("id"));
-		$form    = RGFormsModel::get_form_meta($form_id);
+		$form    = GFFormsModel::get_form_meta($form_id);
 		if (empty($form) || !is_numeric($form_id) || intval($form_id) != $form_id) {
 			die(__('فرم درخواستی وجود ندارد.', 'gravityformszibal'));
 		}
@@ -347,32 +350,32 @@ class GFPersian_Chart_Zibal
 				<div class="zibal_summary_container">
 					<div class="zibal_summary_item">
 						<div class="zibal_summary_title"><?php _e('جمع پرداخت های  زیبال این فرم', 'gravityformszibal') ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num(GFCommon::to_money($total_revenue), 'fa') ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num(GFCommon::to_money($total_revenue), 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info["revenue_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info["revenue"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info["revenue_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info["revenue"], 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info["mid_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info["mid"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info["mid_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info["mid"], 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $sales_label ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($total_sales, 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($sales_label) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($total_sales, 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info["sales_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info["sales"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info["sales_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info["sales"], 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info["midt_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info["midt"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info["midt_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info["midt"], 'fa')) ?></div>
 					</div>
 
 
@@ -403,32 +406,32 @@ class GFPersian_Chart_Zibal
 
 					<div class="zibal_summary_item">
 						<div class="zibal_summary_title"><?php _e("جمع پرداخت های  همه روشهای این فرم", "gravityformszibal") ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num(GFCommon::to_money($total_revenue), 'fa') ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num(GFCommon::to_money($total_revenue), 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info_gateways["revenue_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info_gateways["revenue"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info_gateways["revenue_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info_gateways["revenue"], 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info_gateways["mid_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info_gateways["mid"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info_gateways["mid_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info_gateways["mid"], 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $sales_label ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($total_sales, 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($sales_label) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($total_sales, 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info_gateways["sales_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info_gateways["sales"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info_gateways["sales_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info_gateways["sales"], 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info_gateways["midt_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info_gateways["midt"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info_gateways["midt_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info_gateways["midt"], 'fa')) ?></div>
 					</div>
 
 				</div>
@@ -455,32 +458,32 @@ class GFPersian_Chart_Zibal
 				<div class="zibal_summary_container">
 					<div class="zibal_summary_item">
 						<div class="zibal_summary_title"><?php _e("جمع پرداخت های  همه فرمهای زیبال", "gravityformszibal") ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num(GFCommon::to_money($total_revenue), 'fa') ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num(GFCommon::to_money($total_revenue), 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info_zibal["revenue_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info_zibal["revenue"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info_zibal["revenue_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info_zibal["revenue"], 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info_zibal["mid_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info_zibal["mid"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info_zibal["mid_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info_zibal["mid"], 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $sales_label ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($total_sales, 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($sales_label) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($total_sales, 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info_zibal["sales_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info_zibal["sales"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info_zibal["sales_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info_zibal["sales"], 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info_zibal["midt_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info_zibal["midt"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info_zibal["midt_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info_zibal["midt"], 'fa')) ?></div>
 					</div>
 				</div>
 			</div>
@@ -506,31 +509,31 @@ class GFPersian_Chart_Zibal
 				<div class="zibal_summary_container">
 					<div class="zibal_summary_item">
 						<div class="zibal_summary_title"><?php _e("جمع کل پرداخت های همه فرمهای سایت", "gravityformszibal") ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num(GFCommon::to_money($total_revenue), 'fa') ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num(GFCommon::to_money($total_revenue), 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info_site["revenue_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info_site["revenue"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info_site["revenue_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info_site["revenue"], 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info_site["mid_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info_site["mid"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info_site["mid_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info_site["mid"], 'fa')) ?></div>
 					</div>
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $sales_label ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($total_sales, 'fa') ?></div>
-					</div>
-
-					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info_site["sales_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info_site["sales"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($sales_label) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($total_sales, 'fa')) ?></div>
 					</div>
 
 					<div class="zibal_summary_item">
-						<div class="zibal_summary_title"><?php echo $chart_info_site["midt_label"] ?></div>
-						<div class="zibal_summary_value"><?php echo GF_tr_num($chart_info_site["midt"], 'fa') ?></div>
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info_site["sales_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info_site["sales"], 'fa')) ?></div>
+					</div>
+
+					<div class="zibal_summary_item">
+						<div class="zibal_summary_title"><?php echo esc_html($chart_info_site["midt_label"]) ?></div>
+						<div class="zibal_summary_value"><?php echo esc_html(GF_tr_num($chart_info_site["midt"], 'fa')) ?></div>
 					</div>
 				</div>
 			</div>
@@ -622,11 +625,11 @@ class GFPersian_Chart_Zibal
 
 			function getCurrentCurrency() {
 				<?php if (!class_exists("RGCurrency")) {
-					require_once(ABSPATH . "/" . PLUGINDIR . "/gravityforms/currency.php");
+					require_once(GFCommon::get_base_path() . '/currency.php');
 				}
 				$current_currency = RGCurrency::get_currency(GFCommon::get_currency());
 				?>
-				var currency = new Currency(<?php echo GFCommon::json_encode($current_currency) ?>);
+				var currency = new Currency(<?php echo wp_json_encode($current_currency, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
 				return currency;
 			}
 
@@ -681,17 +684,19 @@ class GFPersian_Chart_Zibal
 	public static function get_mysql_tz_offset()
 	{
 
-		$time_zone_orig = $time_zone = get_option('gmt_offset');
+		$time_zone_orig = get_option('gmt_offset');
+		$time_zone_orig = is_numeric($time_zone_orig) ? (float) $time_zone_orig : 0.0;
+		$time_zone = $time_zone_orig;
 
 		$prefix    = intval($time_zone) > 0 ? '+' : '-';
-		$time_zone = abs($time_zone) * 3600;
+		$time_zone = (int) (abs($time_zone) * 3600);
 		$time_zone = gmdate('H:i', $time_zone);
 		$time_zone = $prefix . $time_zone;
 
 		$today = date('Y-m-d H:i:s');
 		$date  = new DateTime($today);
 
-		$tzn = abs($time_zone_orig) * 3600;
+		$tzn = (int) (abs($time_zone_orig) * 3600);
 		$tzh = intval(gmdate('H', $tzn));
 		$tzm = intval(gmdate('i', $tzn));
 		try {
@@ -710,8 +715,45 @@ class GFPersian_Chart_Zibal
 	}
 
 
+	private static function parse_selected_date($value)
+	{
+		$value = trim((string) $value);
+		if (!preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $value, $matches)) {
+			return false;
+		}
+
+		$year = (int) $matches[1];
+		$month = (int) $matches[2];
+		$day = (int) $matches[3];
+		if ($year < 2000) {
+			if (!function_exists('GF_jalali_to_gregorian')) {
+				return false;
+			}
+			$converted = GF_jalali_to_gregorian($year, $month, $day);
+			if (!is_array($converted) || count($converted) < 3) {
+				return false;
+			}
+			$year = (int) $converted[0];
+			$month = (int) $converted[1];
+			$day = (int) $converted[2];
+		}
+
+		if (!checkdate($month, $day, $year)) {
+			return false;
+		}
+
+		try {
+			return new DateTime(sprintf('%04d-%02d-%02d', $year, $month, $day));
+		} catch (Exception $exception) {
+			return false;
+		}
+	}
+
+
 	public static function lastxdays_chart_info($form_id, $chart, $x)
 	{
+		$form_id = absint($form_id);
+		$chart = absint($chart);
 
 		global $wpdb;
 		$tz        = self::get_mysql_tz_offset();
@@ -806,9 +848,10 @@ class GFPersian_Chart_Zibal
 				$datat = isset($datat) ? $datat : '';
 				$data  .= "[{$timeX},{$datat}],";
 
-				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . __("تعداد پرداخت ", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . $result->new_sales . "</span></div>";
+				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . esc_html__("تعداد پرداخت ", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . absint($result->new_sales) . "</span></div>";
 
-				$tooltips .= "\"<div class='tooltipbox_" . $c . "'><div class='zibal_tooltip_date'>" . $timeX_tooltips . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . __("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . GFCommon::to_money($result->amount_sold) . "</span></div></div>\",";
+				$tooltip_html = "<div class='tooltipbox_" . esc_attr($c) . "'><div class='zibal_tooltip_date'>" . esc_html($timeX_tooltips) . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . esc_html__("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . esc_html(GFCommon::to_money($result->amount_sold)) . "</span></div></div>";
+				$tooltips .= wp_json_encode($tooltip_html, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ',';
 			}
 
 			$data     = substr($data, 0, strlen($data) - 1);
@@ -861,6 +904,8 @@ class GFPersian_Chart_Zibal
 
 	public static function thisweek_chart_info($form_id, $chart)
 	{
+		$form_id = absint($form_id);
+		$chart = absint($chart);
 
 		global $wpdb;
 		$tz        = self::get_mysql_tz_offset();
@@ -1022,9 +1067,10 @@ class GFPersian_Chart_Zibal
 				$datat = isset($datat) ? $datat : '';
 				$data  .= "[{$timeX},{$datat}],";
 
-				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . __("تعداد پرداخت ", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . $result->new_sales . "</span></div>";
+				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . esc_html__("تعداد پرداخت ", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . absint($result->new_sales) . "</span></div>";
 
-				$tooltips .= "\"<div class='tooltipbox_" . $c . "'><div class='zibal_tooltip_date'>" . $timeX_tooltips . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . __("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . GFCommon::to_money($result->amount_sold) . "</span></div></div>\",";
+				$tooltip_html = "<div class='tooltipbox_" . esc_attr($c) . "'><div class='zibal_tooltip_date'>" . esc_html($timeX_tooltips) . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . esc_html__("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . esc_html(GFCommon::to_money($result->amount_sold)) . "</span></div></div>";
+				$tooltips .= wp_json_encode($tooltip_html, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ',';
 			}
 
 			$data     = substr($data, 0, strlen($data) - 1);
@@ -1069,6 +1115,8 @@ class GFPersian_Chart_Zibal
 
 	public static function targetmdays_chart_info($form_id, $chart, $xmonth)
 	{
+		$form_id = absint($form_id);
+		$chart = absint($chart);
 
 		global $wpdb;
 		$tz        = self::get_mysql_tz_offset();
@@ -1217,9 +1265,10 @@ class GFPersian_Chart_Zibal
 				$datat = isset($datat) ? $datat : '';
 				$data  .= "[{$timeX},{$datat}],";
 
-				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . __(" تعداد پرداخت", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . $result->new_sales . "</span></div>";
+				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . esc_html__(" تعداد پرداخت", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . absint($result->new_sales) . "</span></div>";
 
-				$tooltips .= "\"<div class='tooltipbox_" . $c . "'><div class='zibal_tooltip_date'>" . $timeX_tooltips . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . __("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . GFCommon::to_money($result->amount_sold) . "</span></div></div>\",";
+				$tooltip_html = "<div class='tooltipbox_" . esc_attr($c) . "'><div class='zibal_tooltip_date'>" . esc_html($timeX_tooltips) . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . esc_html__("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . esc_html(GFCommon::to_money($result->amount_sold)) . "</span></div></div>";
+				$tooltips .= wp_json_encode($tooltip_html, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ',';
 			}
 
 			$data     = substr($data, 0, strlen($data) - 1);
@@ -1315,6 +1364,8 @@ class GFPersian_Chart_Zibal
 
 	public static function tyday_chart_info($form_id, $chart, $day)
 	{
+		$form_id = absint($form_id);
+		$chart = absint($chart);
 
 		global $wpdb;
 		$tz        = self::get_mysql_tz_offset();
@@ -1416,9 +1467,10 @@ class GFPersian_Chart_Zibal
 
 				$data .= "[(new Date('$m $d , $y $H:00:30')).getTime(),{$datat}],";
 
-				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . __("تعداد پرداخت ", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . $result->new_sales . "</span></div>";
+				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . esc_html__("تعداد پرداخت ", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . absint($result->new_sales) . "</span></div>";
 
-				$tooltips .= "\"<div class='tooltipbox_" . $c . "'><div class='zibal_tooltip_date'>" . $timeX_tooltips . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . __("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . GFCommon::to_money($result->amount_sold) . "</span></div></div>\",";
+				$tooltip_html = "<div class='tooltipbox_" . esc_attr($c) . "'><div class='zibal_tooltip_date'>" . esc_html($timeX_tooltips) . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . esc_html__("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . esc_html(GFCommon::to_money($result->amount_sold)) . "</span></div></div>";
+				$tooltips .= wp_json_encode($tooltip_html, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ',';
 			}
 
 			$data     = substr($data, 0, strlen($data) - 1);
@@ -1463,6 +1515,8 @@ class GFPersian_Chart_Zibal
 
 	public static function yearly_chart_info($form_id, $chart)
 	{
+		$form_id = absint($form_id);
+		$chart = absint($chart);
 
 		global $wpdb;
 		$tz        = self::get_mysql_tz_offset();
@@ -1555,9 +1609,10 @@ class GFPersian_Chart_Zibal
 				$datat = isset($datat) ? $datat : '';
 				$data  .= "[{$timeX},{$datat}],";
 
-				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . __("تعداد پرداخت ", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . $result->new_sales . "</span></div>";
+				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . esc_html__("تعداد پرداخت ", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . absint($result->new_sales) . "</span></div>";
 
-				$tooltips .= "\"<div class='tooltipbox_" . $c . "'><div class='zibal_tooltip_date'>" . $timeX_tooltips . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . __("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . GFCommon::to_money($result->amount_sold) . "</span></div></div>\",";
+				$tooltip_html = "<div class='tooltipbox_" . esc_attr($c) . "'><div class='zibal_tooltip_date'>" . esc_html($timeX_tooltips) . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . esc_html__("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . esc_html(GFCommon::to_money($result->amount_sold)) . "</span></div></div>";
+				$tooltips .= wp_json_encode($tooltip_html, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ',';
 			}
 			$data     = substr($data, 0, strlen($data) - 1);
 			$tooltips = substr($tooltips, 0, strlen($tooltips) - 1);
@@ -1605,6 +1660,8 @@ class GFPersian_Chart_Zibal
 
 	public static function season_chart_info($form_id, $chart, $season)
 	{
+		$form_id = absint($form_id);
+		$chart = absint($chart);
 
 		global $wpdb;
 		$tz        = self::get_mysql_tz_offset();
@@ -1743,9 +1800,10 @@ class GFPersian_Chart_Zibal
 				$datat = isset($datat) ? $datat : '';
 				$data  .= "[{$timeX},{$datat}],";
 
-				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . __("تعداد پرداخت ", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . $result->new_sales . "</span></div>";
+				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . esc_html__("تعداد پرداخت ", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . absint($result->new_sales) . "</span></div>";
 
-				$tooltips .= "\"<div class='tooltipbox_" . $c . "'><div class='zibal_tooltip_date'>" . $timeX_tooltips . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . __("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . GFCommon::to_money($result->amount_sold) . "</span></div></div>\",";
+				$tooltip_html = "<div class='tooltipbox_" . esc_attr($c) . "'><div class='zibal_tooltip_date'>" . esc_html($timeX_tooltips) . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . esc_html__("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . esc_html(GFCommon::to_money($result->amount_sold)) . "</span></div></div>";
+				$tooltips .= wp_json_encode($tooltip_html, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ',';
 			}
 
 			$data     = substr($data, 0, strlen($data) - 1);
@@ -1791,6 +1849,8 @@ class GFPersian_Chart_Zibal
 
 	public static function selection_chart_info($form_id, $chart, $min, $max)
 	{
+		$form_id = absint($form_id);
+		$chart = absint($chart);
 
 		global $wpdb;
 		$tz        = self::get_mysql_tz_offset();
@@ -1849,32 +1909,16 @@ class GFPersian_Chart_Zibal
 		$sales_today   = 0;
 		$revenue_today = 0;
 		$tooltips      = "";
-		if (!empty($results) && isset($_POST['submit']) && $max && $min) {
-			list($y2, $m2, $d2) = explode("-", $max);
+		$max_date = self::parse_selected_date($max);
+		$min_date = self::parse_selected_date($min);
+		if (!empty($results) && isset($_POST['submit']) && $max_date && $min_date) {
+			$max_w = $max_date->format('Ymd');
+			$max_t = $max_date->format('m d , Y');
+			$endd  = $max_date->format('Y-m-d');
 
-			if ($y2 < 2000) {
-				$max  = GF_jalali_to_gregorian($y2, $m2, $d2);
-				$date = new DateTime("$max[0]-$max[1]-$max[2]");
-			} else {
-				$date = new DateTime("$y2-$m2-$d2");
-			}
-
-			$max_w = $date->format('Ymd');
-			$max_t = $date->format('m d , Y');
-			$endd  = $date->format('Y-m-d');
-
-			list($y1, $m1, $d1) = explode("-", $min);
-
-			if ($y1 < 2000) {
-				$min  = GF_jalali_to_gregorian($y1, $m1, $d1);
-				$date = new DateTime("$min[0]-$min[1]-$min[2]");
-			} else {
-				$date = new DateTime("$y1-$m1-$d1");
-			}
-
-			$min_w = $date->format('Ymd');
-			$min_t = $date->format('m d , Y');
-			$strd  = $date->format('Y-m-d');
+			$min_w = $min_date->format('Ymd');
+			$min_t = $min_date->format('m d , Y');
+			$strd  = $min_date->format('Y-m-d');
 			$data  = "[";
 			foreach ($results as $result) {
 
@@ -1890,9 +1934,10 @@ class GFPersian_Chart_Zibal
 				$datat = isset($datat) ? $datat : '';
 				$data  .= "[{$timeX},{$datat}],";
 
-				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . __("تعداد پرداخت ", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . $result->new_sales . "</span></div>";
+				$sales_line = "<div class='zibal_tooltip_sales'><span class='zibal_tooltip_heading'>" . esc_html__("تعداد پرداخت ", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . absint($result->new_sales) . "</span></div>";
 
-				$tooltips .= "\"<div class='tooltipbox_" . $c . "'><div class='zibal_tooltip_date'>" . $timeX_tooltips . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . __("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . GFCommon::to_money($result->amount_sold) . "</span></div></div>\",";
+				$tooltip_html = "<div class='tooltipbox_" . esc_attr($c) . "'><div class='zibal_tooltip_date'>" . esc_html($timeX_tooltips) . "</div>{$sales_line}<div class='zibal_tooltip_revenue'><span class='zibal_tooltip_heading'>" . esc_html__("پرداختی", "gravityformszibal") . ": </span><span class='zibal_tooltip_value'>" . esc_html(GFCommon::to_money($result->amount_sold)) . "</span></div></div>";
+				$tooltips .= wp_json_encode($tooltip_html, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ',';
 			}
 
 			$data     = substr($data, 0, strlen($data) - 1);

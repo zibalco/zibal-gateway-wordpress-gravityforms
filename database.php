@@ -14,7 +14,8 @@ class GFPersian_DB_Zibal {
 		$table_name = self::get_table_name();
 
 		$old_table = $wpdb->prefix . "rg_zibal";
-		if ( $wpdb->get_var( "SHOW TABLES LIKE '$old_table'" ) ) {
+		$old_table_like = method_exists( $wpdb, 'esc_like' ) ? $wpdb->esc_like( $old_table ) : addcslashes( $old_table, '_%\\' );
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $old_table_like ) ) ) {
 			$wpdb->query( "RENAME TABLE $old_table TO $table_name" );
 		}
 
@@ -61,13 +62,28 @@ class GFPersian_DB_Zibal {
 	}
 
 	public static function get_available_forms() {
-		$forms           = RGFormsModel::get_forms();
+		$forms           = GFFormsModel::get_forms();
 		$available_forms = array();
 		foreach ( $forms as $form ) {
 			$available_forms[] = $form;
 		}
 
 		return $available_forms;
+	}
+
+	private static function decode_feed_meta( $value ) {
+		if ( ! is_string( $value ) ) {
+			return is_array( $value ) ? $value : array();
+		}
+
+		/* Feed settings are arrays. Reject serialized objects before unserializing. */
+		if ( preg_match( '/(^|[;{}])(?:O|C):\d+:/', $value ) ) {
+			return array();
+		}
+
+		$value = maybe_unserialize( $value );
+
+		return is_array( $value ) ? $value : array();
 	}
 
 	public static function get_feed( $id ) {
@@ -79,7 +95,7 @@ class GFPersian_DB_Zibal {
 			return array();
 		}
 		$result         = $results[0];
-		$result["meta"] = maybe_unserialize( $result["meta"] );
+		$result["meta"] = self::decode_feed_meta( $result["meta"] );
 
 		return $result;
 	}
@@ -87,14 +103,17 @@ class GFPersian_DB_Zibal {
 	public static function get_feeds() {
 		global $wpdb;
 		$table_name      = self::get_table_name();
-		$form_table_name = RGFormsModel::get_form_table_name();
+		$form_table_name = GFFormsModel::get_form_table_name();
 		$sql             = "SELECT s.id, s.is_active, s.form_id, s.meta, f.title as form_title
                 FROM $table_name s
                 INNER JOIN $form_table_name f ON s.form_id = f.id";
 		$results         = $wpdb->get_results( $sql, ARRAY_A );
+		if ( ! is_array( $results ) ) {
+			return array();
+		}
 		$count           = sizeof( $results );
 		for ( $i = 0; $i < $count; $i ++ ) {
-			$results[ $i ]["meta"] = maybe_unserialize( $results[ $i ]["meta"] );
+			$results[ $i ]["meta"] = self::decode_feed_meta( $results[ $i ]["meta"] );
 		}
 
 		return $results;
@@ -111,7 +130,7 @@ class GFPersian_DB_Zibal {
 		}
 		$count = sizeof( $results );
 		for ( $i = 0; $i < $count; $i ++ ) {
-			$results[ $i ]["meta"] = maybe_unserialize( $results[ $i ]["meta"] );
+			$results[ $i ]["meta"] = self::decode_feed_meta( $results[ $i ]["meta"] );
 		}
 
 		return $results;
@@ -120,6 +139,10 @@ class GFPersian_DB_Zibal {
 	public static function update_feed( $id, $form_id, $is_active, $setting ) {
 		global $wpdb;
 		$table_name = self::get_table_name();
+		$id         = absint( $id );
+		$form_id    = absint( $form_id );
+		$is_active  = $is_active ? 1 : 0;
+		$setting    = is_array( $setting ) ? $setting : array();
 		$setting    = maybe_serialize( $setting );
 		if ( $id == 0 ) {
 			$wpdb->insert( $table_name, array(
@@ -142,7 +165,11 @@ class GFPersian_DB_Zibal {
 	public static function delete_feed( $id ) {
 		global $wpdb;
 		$table_name = self::get_table_name();
-		$wpdb->query( $wpdb->prepare( "DELETE FROM $table_name WHERE id=%s", $id ) );
+		$id = absint( $id );
+		if ( $id < 1 ) {
+			return;
+		}
+		$wpdb->query( $wpdb->prepare( "DELETE FROM $table_name WHERE id=%d", $id ) );
 	}
 
 	//----جمع پرداخت های  این درگاه این فرم----------
