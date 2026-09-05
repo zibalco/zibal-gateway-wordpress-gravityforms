@@ -2155,6 +2155,7 @@ class GFPersian_Gateway_Zibal
 	{
 		return array(
 			'Content-Type'           => 'application/json',
+			'Referer'                => home_url('/'),
 			'User-Agent'             => 'GravityForms-Zibal/' . self::$version . '; WordPress',
 			'X-Zibal-Plugin'         => 'gravityforms-zibal',
 			'X-Zibal-Plugin-Version' => self::$version,
